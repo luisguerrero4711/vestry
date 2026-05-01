@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
+import { isDemoUser, demoProperties } from '../lib/demoData'
 
 const TYPES = ['single_family','multi_family','condo','townhouse','commercial']
 
@@ -20,6 +21,7 @@ function PropertyModal({ property, onClose, onSave }) {
 
   const handleSave = async (e) => {
     e.preventDefault()
+    if (isDemoUser(user)) { onSave(); return }
     setLoading(true); setError('')
     const payload = { ...form, user_id: user.id, updated_at: new Date().toISOString() }
     const { error } = isEdit
@@ -114,6 +116,7 @@ export default function Properties() {
 
   const fetchProps = async () => {
     setLoading(true)
+    if (isDemoUser(user)) { setProps(demoProperties); setLoading(false); return }
     const { data } = await supabase.from('properties')
       .select('*').eq('user_id', user.id).order('created_at')
     setProps(data ?? [])
@@ -123,6 +126,7 @@ export default function Properties() {
   useEffect(() => { if (user) fetchProps() }, [user])
 
   const handleDelete = async (id) => {
+    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
     if (!window.confirm('Delete this property? This cannot be undone.')) return
     await supabase.from('properties').delete().eq('id', id)
     fetchProps()

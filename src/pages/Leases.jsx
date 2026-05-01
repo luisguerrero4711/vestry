@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import StatusPill from '../components/StatusPill'
+import { isDemoUser, demoLeases, demoProperties, demoTenants } from '../lib/demoData'
 
 const fmt = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -163,6 +164,13 @@ export default function Leases() {
 
   const fetchData = async () => {
     setLoading(true)
+    if (isDemoUser(user)) {
+      setLeases(demoLeases)
+      setProps(demoProperties.map(p => ({ id: p.id, name: p.name })))
+      setTens(demoTenants.map(t => ({ id: t.id, first_name: t.first_name, last_name: t.last_name })))
+      setLoading(false)
+      return
+    }
     const [{ data: ls }, { data: ps }, { data: ts }] = await Promise.all([
       supabase.from('leases')
         .select('*, properties(name), tenants(first_name,last_name)')
@@ -180,6 +188,7 @@ export default function Leases() {
   useEffect(() => { if (user) fetchData() }, [user])
 
   const handleDelete = async (id) => {
+    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
     if (!window.confirm('Delete this lease?')) return
     await supabase.from('leases').delete().eq('id', id)
     fetchData()

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
+import { isDemoUser, demoProperties, demoPayments, demoExpenses } from '../lib/demoData'
 
 const fmt = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -23,6 +24,13 @@ export default function Reports() {
 
   const fetchData = async () => {
     setLoading(true)
+    if (isDemoUser(user)) {
+      setProps(demoProperties.map(p => ({ id: p.id, name: p.name, city: p.city, state: p.state })))
+      setPays(demoPayments.filter(p => p.status === 'paid' && p.paid_date?.startsWith(String(year))))
+      setExp(demoExpenses.filter(e => e.date?.startsWith(String(year))))
+      setLoading(false)
+      return
+    }
     const [{ data: ps }, { data: pays }, { data: exps }] = await Promise.all([
       supabase.from('properties').select('id,name,city,state').eq('user_id', user.id),
       supabase.from('rent_payments')

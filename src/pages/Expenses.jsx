@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
+import { isDemoUser, demoExpenses, demoProperties } from '../lib/demoData'
 
 const fmt = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -24,6 +25,7 @@ function ExpenseModal({ expense, properties, onClose, onSave }) {
 
   const handleSave = async (e) => {
     e.preventDefault()
+    if (isDemoUser(user)) { onSave(); return }
     setLoading(true); setError('')
     const payload = { ...form, user_id: user.id, amount: Number(form.amount), unit_id: null }
     const { error } = isEdit
@@ -116,6 +118,12 @@ export default function Expenses() {
 
   const fetchData = async () => {
     setLoading(true)
+    if (isDemoUser(user)) {
+      setExp([...demoExpenses].sort((a, b) => b.date.localeCompare(a.date)))
+      setProps(demoProperties.map(p => ({ id: p.id, name: p.name })))
+      setLoading(false)
+      return
+    }
     const [{ data: exps }, { data: props }] = await Promise.all([
       supabase.from('expenses')
         .select('*, properties(name)')
@@ -131,6 +139,7 @@ export default function Expenses() {
   useEffect(() => { if (user) fetchData() }, [user])
 
   const handleDelete = async (id) => {
+    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
     if (!window.confirm('Delete this expense?')) return
     await supabase.from('expenses').delete().eq('id', id)
     fetchData()

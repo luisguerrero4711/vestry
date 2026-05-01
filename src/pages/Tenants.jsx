@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import StatusPill from '../components/StatusPill'
+import { isDemoUser, demoTenants, demoProperties } from '../lib/demoData'
 
 function TenantModal({ tenant, properties, onClose, onSave }) {
   const { user } = useAuth()
@@ -22,6 +23,7 @@ function TenantModal({ tenant, properties, onClose, onSave }) {
 
   const handleSave = async (e) => {
     e.preventDefault()
+    if (isDemoUser(user)) { onSave(); return }
     setLoading(true); setError('')
     const payload = { ...form, user_id: user.id, updated_at: new Date().toISOString() }
     // coerce empty strings to null for FK fields
@@ -150,6 +152,12 @@ export default function Tenants() {
 
   const fetchData = async () => {
     setLoading(true)
+    if (isDemoUser(user)) {
+      setTenants(demoTenants)
+      setProps(demoProperties.map(p => ({ id: p.id, name: p.name })))
+      setLoading(false)
+      return
+    }
     const [{ data: t }, { data: p }] = await Promise.all([
       supabase.from('tenants')
         .select('*, properties(name,city,state)')
@@ -165,6 +173,7 @@ export default function Tenants() {
   useEffect(() => { if (user) fetchData() }, [user])
 
   const handleDelete = async (id) => {
+    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
     if (!window.confirm('Delete this tenant? This cannot be undone.')) return
     await supabase.from('tenants').delete().eq('id', id)
     fetchData()

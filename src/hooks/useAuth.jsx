@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_USER } from '../lib/demoData'
 
 const AuthContext = createContext(null)
 
@@ -8,13 +9,19 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
+    // Check for persisted demo session
+    if (sessionStorage.getItem('vestry_demo') === 'true') {
+      setUser(DEMO_USER)
+      setLoading(false)
+      return
+    }
+
+    // Normal Supabase auth
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
     })
@@ -23,6 +30,11 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signIn = async (email, password) => {
+    if (email.toLowerCase().trim() === DEMO_EMAIL && password === DEMO_PASSWORD) {
+      sessionStorage.setItem('vestry_demo', 'true')
+      setUser(DEMO_USER)
+      return { error: null }
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
   }
@@ -32,7 +44,14 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = async () => {
+    if (user?.id === 'demo-user-id') {
+      sessionStorage.removeItem('vestry_demo')
+      setUser(null)
+      return
+    }
+    await supabase.auth.signOut()
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>

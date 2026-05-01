@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import KpiCard from '../components/KpiCard'
 import StatusPill from '../components/StatusPill'
+import { isDemoUser, demoProperties, demoPayments, demoExpenses, demoTenants } from '../lib/demoData'
 
 const fmt = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -34,6 +35,18 @@ export default function Dashboard() {
 
   const fetchAll = async () => {
     setLoading(true)
+    if (isDemoUser(user)) {
+      const currentPays = demoPayments.filter(p =>
+        p.due_date >= monthStart && p.due_date <= monthEnd)
+      const currentExps = demoExpenses.filter(e =>
+        e.date >= monthStart && e.date <= monthEnd)
+      setProps(demoProperties)
+      setPayments(currentPays)
+      setExpenses(currentExps)
+      setTenants(demoTenants.filter(t => t.status === 'active'))
+      setLoading(false)
+      return
+    }
     const [{ data: props }, { data: pays }, { data: exps }, { data: tens }] = await Promise.all([
       supabase.from('properties').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('rent_payments')

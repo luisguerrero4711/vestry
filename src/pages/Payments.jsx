@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import StatusPill from '../components/StatusPill'
+import { isDemoUser, demoPayments, demoProperties, demoTenants } from '../lib/demoData'
 
 const fmt = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -24,6 +25,7 @@ function PaymentModal({ payment, properties, tenants, onClose, onSave }) {
 
   const handleSave = async (e) => {
     e.preventDefault()
+    if (isDemoUser(user)) { onSave(); return }
     setLoading(true); setError('')
     const payload = {
       ...form,
@@ -141,6 +143,13 @@ export default function Payments() {
 
   const fetchData = async () => {
     setLoading(true)
+    if (isDemoUser(user)) {
+      setPays([...demoPayments].reverse())
+      setProps(demoProperties.map(p => ({ id: p.id, name: p.name })))
+      setTens(demoTenants.filter(t => t.status === 'active'))
+      setLoading(false)
+      return
+    }
     const [{ data: pays }, { data: props }, { data: tens }] = await Promise.all([
       supabase.from('rent_payments')
         .select('*, properties(name,city,state), tenants(first_name,last_name)')
@@ -158,6 +167,7 @@ export default function Payments() {
   useEffect(() => { if (user) fetchData() }, [user])
 
   const handleDelete = async (id) => {
+    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
     if (!window.confirm('Delete this payment record?')) return
     await supabase.from('rent_payments').delete().eq('id', id)
     fetchData()
