@@ -14,6 +14,7 @@ function LeaseModal({ lease, properties, tenants, onClose, onSave }) {
   const [form, setForm] = useState({
     property_id: '', tenant_id: '', start_date: '', end_date: '',
     monthly_rent: '', security_deposit: '', status: 'active', notes: '',
+    due_day: 1, reminder_days: 3,
     ...lease,
   })
   const [file, setFile]       = useState(null)
@@ -133,6 +134,29 @@ function LeaseModal({ lease, properties, tenants, onClose, onSave }) {
                   📄 View current lease PDF
                 </a>
               )}
+            </div>
+
+            {/* Stripe / reminder settings */}
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Rent Due Day</label>
+                <select className="form-select"
+                  value={form.due_day} onChange={e => set('due_day', Number(e.target.value))}>
+                  <option value={1}>1st of month</option>
+                  <option value={15}>15th of month</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Reminder (days before)</label>
+                <select className="form-select"
+                  value={form.reminder_days} onChange={e => set('reminder_days', Number(e.target.value))}>
+                  <option value={1}>1 day before</option>
+                  <option value={2}>2 days before</option>
+                  <option value={3}>3 days before</option>
+                  <option value={5}>5 days before</option>
+                  <option value={7}>7 days before</option>
+                </select>
+              </div>
             </div>
 
             <div className="form-group">

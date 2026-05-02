@@ -10,6 +10,7 @@ const fmt = (n) =>
 
 const METHODS = ['cash','check','venmo','zelle','bank_transfer','other']
 
+// ── Payment Modal ─────────────────────────────────────────────────────────────
 function PaymentModal({ payment, properties, tenants, onClose, onSave }) {
   const { user } = useAuth()
   const isEdit   = !!payment?.id
@@ -31,8 +32,8 @@ function PaymentModal({ payment, properties, tenants, onClose, onSave }) {
       ...form,
       user_id: user.id,
       amount: Number(form.amount),
-      tenant_id:  form.tenant_id  || null,
-      unit_id:    null,
+      tenant_id: form.tenant_id || null,
+      unit_id: null,
     }
     const { error } = isEdit
       ? await supabase.from('rent_payments').update(payload).eq('id', payment.id)
@@ -132,14 +133,73 @@ function PaymentModal({ payment, properties, tenants, onClose, onSave }) {
   )
 }
 
+// ── Stripe action helpers ─────────────────────────────────────────────────────
+function useStripeActions(fetchData) {
+  const [loadingId, setLoadingId] = useState(null)
+  const [toast, setToast]         = useState(null)
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  const requestPayment = async (payment, property) => {
+    if (!payment.tenant_id) { showToast('Assign a tenant to this payment first.', 'error'); return }
+    setLoadingId(payment.id + '_request')
+    try {
+      const res = await fetch('/.netlify/functions/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_id:    payment.id,
+          tenant_id:     payment.tenant_id,
+          amount:        Number(payment.amount),
+          description:   `Due ${payment.due_date}`,
+          property_name: property?.name || 'Property',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error creating checkout')
+      navigator.clipboard?.writeText(data.url).catch(() => {})
+      showToast('Payment link created and copied to clipboard!')
+      fetchData()
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  const openBillingPortal = async (tenantId) => {
+    setLoadingId(tenantId + '_portal')
+    try {
+      const res = await fetch('/.netlify/functions/billing-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error opening portal')
+      window.open(data.url, '_blank')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  return { loadingId, toast, requestPayment, openBillingPortal }
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Payments() {
   const { user } = useAuth()
-  const [payments, setPays]   = useState([])
+  const [payments, setPays]    = useState([])
   const [properties, setProps] = useState([])
-  const [tenants, setTens]    = useState([])
-  const [loading, setLoading] = useState(true)
-  const [modal, setModal]     = useState(null)
-  const [filter, setFilter]   = useState('all')
+  const [tenants, setTens]     = useState([])
+  const [loading, setLoading]  = useState(true)
+  const [modal, setModal]      = useState(null)
+  const [filter, setFilter]    = useState('all')
 
   const fetchData = async () => {
     setLoading(true)
@@ -166,6 +226,8 @@ export default function Payments() {
 
   useEffect(() => { if (user) fetchData() }, [user])
 
+  const { loadingId, toast, requestPayment, openBillingPortal } = useStripeActions(fetchData)
+
   const handleDelete = async (id) => {
     if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
     if (!window.confirm('Delete this payment record?')) return
@@ -173,10 +235,10 @@ export default function Payments() {
     fetchData()
   }
 
-  const filtered = filter === 'all' ? payments : payments.filter(p => p.status === filter)
-
+  const filtered       = filter === 'all' ? payments : payments.filter(p => p.status === filter)
   const totalCollected = payments.filter(p => p.status === 'paid').reduce((s, p) => s + Number(p.amount), 0)
   const totalDue       = payments.filter(p => ['due','overdue'].includes(p.status)).reduce((s, p) => s + Number(p.amount), 0)
+  const propMap        = Object.fromEntries(properties.map(p => [p.id, p]))
 
   return (
     <Layout>
@@ -184,12 +246,23 @@ export default function Payments() {
         <div className="page-header">
           <div>
             <h1 className="page-title">Payments</h1>
-            <p className="page-subtitle">Manual rent tracking — log each payment as received</p>
+            <p className="page-subtitle">Manual tracking + Stripe online payments</p>
           </div>
-          <button className="btn btn-accent" onClick={() => setModal('new')}>
-            + Log Payment
-          </button>
+          <button className="btn btn-accent" onClick={() => setModal('new')}>+ Log Payment</button>
         </div>
+
+        {/* Toast notification */}
+        {toast && (
+          <div style={{
+            position: 'fixed', top: 20, right: 20, zIndex: 9999,
+            background: toast.type === 'error' ? 'var(--late)' : '#059669',
+            color: '#fff', padding: '12px 20px', borderRadius: 10,
+            fontSize: 13.5, fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            transition: 'opacity 0.2s',
+          }}>
+            {toast.msg}
+          </div>
+        )}
 
         {/* Summary pills */}
         <div style={styles.summaryRow}>
@@ -220,7 +293,7 @@ export default function Payments() {
             <div className="empty-state">
               <div className="empty-icon">💳</div>
               <div className="empty-title">No payments logged</div>
-              <div className="empty-sub">Use the button above to log rent payments as they come in.</div>
+              <div className="empty-sub">Log manual payments or use Stripe to request payment online.</div>
               <button className="btn btn-primary" onClick={() => setModal('new')}>Log a payment</button>
             </div>
           </div>
@@ -236,7 +309,7 @@ export default function Payments() {
                   <th>Method</th>
                   <th>Amount</th>
                   <th>Status</th>
-                  <th></th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -261,10 +334,40 @@ export default function Payments() {
                     <td className="td-mono">{fmt(p.amount)}</td>
                     <td><StatusPill status={p.status} /></td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => setModal(p)}>Edit</button>
                         <button className="btn btn-ghost btn-sm" style={{ color: 'var(--late)' }}
                           onClick={() => handleDelete(p.id)}>Del</button>
+
+                        {/* Stripe: request payment or copy existing link */}
+                        {p.status !== 'paid' && !isDemoUser(user) && (
+                          p.payment_link ? (
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
+                              title="Copy payment link to clipboard"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(p.payment_link)
+                              }}>
+                              📋 Copy Link
+                            </button>
+                          ) : (
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
+                              disabled={loadingId === p.id + '_request'}
+                              title="Create Stripe payment link and copy to clipboard"
+                              onClick={() => requestPayment(p, propMap[p.property_id])}>
+                              {loadingId === p.id + '_request' ? '…' : '💳 Request'}
+                            </button>
+                          )
+                        )}
+
+                        {/* Stripe: autopay / billing portal */}
+                        {p.tenant_id && !isDemoUser(user) && (
+                          <button className="btn btn-ghost btn-sm" style={{ color: '#6366f1' }}
+                            disabled={loadingId === p.tenant_id + '_portal'}
+                            title="Open Stripe portal — tenant can save card and set up autopay"
+                            onClick={() => openBillingPortal(p.tenant_id)}>
+                            {loadingId === p.tenant_id + '_portal' ? '…' : '↻ Autopay'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -289,57 +392,28 @@ export default function Payments() {
 }
 
 const styles = {
-  summaryRow: {
-    display: 'flex',
-    gap: 14,
-    marginBottom: 20,
-  },
+  summaryRow: { display: 'flex', gap: 14, marginBottom: 20 },
   summaryCard: {
-    background: 'var(--warm-white)',
-    border: '1px solid var(--border)',
-    borderRadius: 12,
-    padding: '14px 20px',
+    background: 'var(--warm-white)', border: '1px solid var(--border)',
+    borderRadius: 12, padding: '14px 20px',
   },
   summaryVal: {
-    fontFamily: "'Cormorant Garamond', serif",
-    fontSize: 26,
-    fontWeight: 600,
-    color: 'var(--text)',
-    lineHeight: 1,
+    fontFamily: "'Cormorant Garamond', serif", fontSize: 26,
+    fontWeight: 600, color: 'var(--text)', lineHeight: 1,
   },
   summaryLabel: {
-    fontSize: 10.5,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.07em',
-    color: 'var(--muted)',
-    marginTop: 4,
+    fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase',
+    letterSpacing: '0.07em', color: 'var(--muted)', marginTop: 4,
   },
   filterRow: {
-    display: 'flex',
-    gap: 4,
-    marginBottom: 18,
-    background: 'var(--warm-white)',
-    border: '1px solid var(--border)',
-    borderRadius: 10,
-    padding: 3,
-    width: 'fit-content',
+    display: 'flex', gap: 4, marginBottom: 18, background: 'var(--warm-white)',
+    border: '1px solid var(--border)', borderRadius: 10, padding: 3, width: 'fit-content',
   },
   filterBtn: {
-    padding: '7px 14px',
-    border: 'none',
-    borderRadius: 7,
-    background: 'transparent',
-    color: 'var(--muted)',
-    fontSize: 12.5,
-    fontWeight: 500,
-    cursor: 'pointer',
-    fontFamily: "'Outfit', sans-serif",
+    padding: '7px 14px', border: 'none', borderRadius: 7,
+    background: 'transparent', color: 'var(--muted)', fontSize: 12.5,
+    fontWeight: 500, cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
     transition: 'background 0.15s, color 0.15s',
   },
-  filterActive: {
-    background: 'var(--active-bg)',
-    color: 'var(--active-fg)',
-    fontWeight: 600,
-  },
+  filterActive: { background: 'var(--active-bg)', color: 'var(--active-fg)', fontWeight: 600 },
 }

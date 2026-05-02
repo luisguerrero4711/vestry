@@ -2,6 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
+[functions]
+  node_bundler = "esbuild"
+
+[functions."send-reminders"]
+  schedule = "0 12 * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
