@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import StatusPill from '../components/StatusPill'
 import { isDemoUser, demoPayments, demoProperties, demoTenants } from '../lib/demoData'
+import { usePlan } from '../hooks/usePlan'
 
 const fmt = (n) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
@@ -194,6 +195,7 @@ function useStripeActions(fetchData) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Payments() {
   const { user } = useAuth()
+  const { can }  = usePlan()
   const [payments, setPays]    = useState([])
   const [properties, setProps] = useState([])
   const [tenants, setTens]     = useState([])
@@ -341,26 +343,31 @@ export default function Payments() {
 
                         {/* Stripe: request payment or copy existing link */}
                         {p.status !== 'paid' && !isDemoUser(user) && (
-                          p.payment_link ? (
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
-                              title="Copy payment link to clipboard"
-                              onClick={() => {
-                                navigator.clipboard?.writeText(p.payment_link)
-                              }}>
-                              📋 Copy Link
-                            </button>
+                          can('stripePayments') ? (
+                            p.payment_link ? (
+                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
+                                title="Copy payment link to clipboard"
+                                onClick={() => navigator.clipboard?.writeText(p.payment_link)}>
+                                📋 Copy Link
+                              </button>
+                            ) : (
+                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
+                                disabled={loadingId === p.id + '_request'}
+                                title="Create Stripe payment link and copy to clipboard"
+                                onClick={() => requestPayment(p, propMap[p.property_id])}>
+                                {loadingId === p.id + '_request' ? '…' : '💳 Request'}
+                              </button>
+                            )
                           ) : (
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
-                              disabled={loadingId === p.id + '_request'}
-                              title="Create Stripe payment link and copy to clipboard"
-                              onClick={() => requestPayment(p, propMap[p.property_id])}>
-                              {loadingId === p.id + '_request' ? '…' : '💳 Request'}
-                            </button>
+                            <a href="/pricing" style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600, whiteSpace: 'nowrap' }}
+                              title="Upgrade to Pro to use Stripe payments">
+                              ✦ Pro feature
+                            </a>
                           )
                         )}
 
                         {/* Stripe: autopay / billing portal */}
-                        {p.tenant_id && !isDemoUser(user) && (
+                        {p.tenant_id && !isDemoUser(user) && can('stripePayments') && (
                           <button className="btn btn-ghost btn-sm" style={{ color: '#6366f1' }}
                             disabled={loadingId === p.tenant_id + '_portal'}
                             title="Open Stripe portal — tenant can save card and set up autopay"

@@ -84,6 +84,21 @@ exports.handler = async (event) => {
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const sub = stripeEvent.data.object
+      const supabaseUserId = sub.metadata?.supabase_user_id
+      const plan           = sub.metadata?.plan
+
+      // Case A: landlord subscription (has supabase_user_id + plan in metadata)
+      if (supabaseUserId && plan) {
+        const isActive  = ['active', 'trialing'].includes(sub.status)
+        const newPlan   = isActive ? plan : 'free'
+        await supabase
+          .from('profiles')
+          .update({ plan: newPlan, stripe_subscription_id: sub.id })
+          .eq('id', supabaseUserId)
+        break
+      }
+
+      // Case B: tenant autopay subscription → save on lease
       const { data: tenant } = await supabase
         .from('tenants')
         .select('id')
@@ -96,6 +111,19 @@ exports.handler = async (event) => {
           .update({ stripe_subscription_id: sub.id })
           .eq('tenant_id', tenant.id)
           .eq('status', 'active')
+      }
+      break
+    }
+
+    // ── Landlord subscription cancelled / deleted ───────────────────────────
+    case 'customer.subscription.deleted': {
+      const sub            = stripeEvent.data.object
+      const supabaseUserId = sub.metadata?.supabase_user_id
+      if (supabaseUserId) {
+        await supabase
+          .from('profiles')
+          .update({ plan: 'free', stripe_subscription_id: null })
+          .eq('id', supabaseUserId)
       }
       break
     }

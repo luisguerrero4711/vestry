@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import { isDemoUser, demoProperties } from '../lib/demoData'
+import { usePlan } from '../hooks/usePlan'
 
 const TYPES = ['single_family','multi_family','condo','townhouse','commercial']
 
@@ -109,6 +110,7 @@ function PropertyModal({ property, onClose, onSave }) {
 
 export default function Properties() {
   const { user } = useAuth()
+  const { canAddProperty, limits } = usePlan()
   const [props, setProps]     = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal]     = useState(null) // null | 'new' | property object
@@ -140,9 +142,15 @@ export default function Properties() {
             <h1 className="page-title">Properties</h1>
             <p className="page-subtitle">Manage your rental portfolio</p>
           </div>
-          <button className="btn btn-accent" onClick={() => setModal('new')}>
-            + Add Property
-          </button>
+          {canAddProperty(props.length) ? (
+            <button className="btn btn-accent" onClick={() => setModal('new')}>
+              + Add Property
+            </button>
+          ) : (
+            <a href="/pricing" className="btn btn-outline" title={`Upgrade to add more than ${limits.maxProperties} propert${limits.maxProperties === 1 ? 'y' : 'ies'}`}>
+              ✦ Upgrade to add more
+            </a>
+          )}
         </div>
 
         {loading ? (

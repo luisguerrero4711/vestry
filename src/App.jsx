@@ -9,6 +9,7 @@ import Payments    from './pages/Payments'
 import Leases      from './pages/Leases'
 import Expenses    from './pages/Expenses'
 import Reports     from './pages/Reports'
+import Pricing     from './pages/Pricing'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/leases"     element={<PrivateRoute><Leases     /></PrivateRoute>} />
           <Route path="/expenses"   element={<PrivateRoute><Expenses   /></PrivateRoute>} />
           <Route path="/reports"    element={<PrivateRoute><Reports    /></PrivateRoute>} />
+          <Route path="/pricing"    element={<PrivateRoute><Pricing    /></PrivateRoute>} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

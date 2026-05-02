@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { usePlan, PLANS } from '../hooks/usePlan'
 
 const NAV = [
   {
@@ -21,14 +22,24 @@ const NAV = [
   },
 ]
 
+const PLAN_COLORS = {
+  free:      { bg: '#f3f4f6', color: '#6b7280' },
+  pro:       { bg: '#fef3c7', color: '#92400e' },
+  portfolio: { bg: '#d1fae5', color: '#065f46' },
+}
+
 export default function Sidebar() {
   const { user, signOut } = useAuth()
+  const { plan, isAdmin, loading: planLoading } = usePlan()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/auth')
   }
+
+  const planColors = PLAN_COLORS[plan] ?? PLAN_COLORS.free
+  const planLabel  = isAdmin ? 'Admin' : (PLANS[plan]?.label ?? 'Free')
 
   return (
     <aside style={styles.sidebar}>
@@ -59,6 +70,34 @@ export default function Sidebar() {
         </div>
       ))}
 
+      {/* Upgrade / plan section */}
+      {!planLoading && (
+        <div style={{ padding: '12px 14px' }}>
+          {plan !== 'portfolio' && !isAdmin ? (
+            <NavLink
+              to="/pricing"
+              style={({ isActive }) => ({
+                ...styles.upgradeBtn,
+                ...(isActive ? { background: 'var(--accent)', color: '#fff', border: 'none' } : {}),
+              })}
+            >
+              ✦ Upgrade plan
+            </NavLink>
+          ) : (
+            <NavLink
+              to="/pricing"
+              style={({ isActive }) => ({
+                ...styles.navItem,
+                ...(isActive ? styles.navItemActive : {}),
+              })}
+            >
+              <span style={styles.icon}>⚙️</span>
+              Billing
+            </NavLink>
+          )}
+        </div>
+      )}
+
       {/* User footer */}
       <div style={styles.footer}>
         <div style={styles.userRow}>
@@ -67,6 +106,16 @@ export default function Sidebar() {
           </div>
           <div style={styles.userInfo}>
             <div style={styles.userEmail}>{user?.email}</div>
+            {!planLoading && (
+              <div style={{
+                fontSize: 10, fontWeight: 700, marginTop: 2,
+                background: planColors.bg, color: planColors.color,
+                padding: '1px 6px', borderRadius: 4,
+                display: 'inline-block', letterSpacing: '0.05em', textTransform: 'uppercase',
+              }}>
+                {planLabel}
+              </div>
+            )}
           </div>
         </div>
         <button onClick={handleSignOut} style={styles.signOutBtn}>
@@ -148,6 +197,19 @@ const styles = {
     fontSize: 15,
     lineHeight: 1,
     flexShrink: 0,
+  },
+  upgradeBtn: {
+    display: 'block',
+    textAlign: 'center',
+    padding: '9px 12px',
+    borderRadius: 8,
+    fontSize: 12.5,
+    fontWeight: 700,
+    color: 'var(--accent)',
+    textDecoration: 'none',
+    border: '1.5px dashed var(--accent)',
+    letterSpacing: '0.02em',
+    transition: 'background 0.15s, color 0.15s',
   },
   footer: {
     marginTop: 'auto',
