@@ -28,8 +28,8 @@ export const PLANS = {
   },
 }
 
-// Demo users get Pro limits (so they can see all features)
-const DEMO_PROFILE = { plan: 'pro', is_admin: false }
+// Demo users get admin + portfolio access (so they can see all features including admin dashboard)
+const DEMO_PROFILE = { plan: 'portfolio', is_admin: true }
 
 // ── Hook ────────────────────────────────────────────────────
 export function usePlan() {
