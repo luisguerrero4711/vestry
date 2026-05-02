@@ -70,6 +70,24 @@ export default function Sidebar() {
         </div>
       ))}
 
+      {/* Admin link — only shown to admins */}
+      {!planLoading && isAdmin && (
+        <div style={{ padding: '0 14px 4px' }}>
+          <NavLink
+            to="/admin"
+            style={({ isActive }) => ({
+              ...styles.navItem,
+              ...(isActive ? styles.navItemActive : {}),
+              background: 'rgba(196,112,74,0.08)',
+              color: 'var(--accent)',
+            })}
+          >
+            <span style={styles.icon}>⚡</span>
+            Admin
+          </NavLink>
+        </div>
+      )}
+
       {/* Upgrade / plan section */}
       {!planLoading && (
         <div style={{ padding: '12px 14px' }}>
