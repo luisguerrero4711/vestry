@@ -100,7 +100,7 @@ export default function Auth() {
         </form>
 
         <p style={styles.legal}>
-          Free for up to 3 units. No credit card required.
+          Free plan includes 1 property. No credit card required.
         </p>
       </div>
     </div>

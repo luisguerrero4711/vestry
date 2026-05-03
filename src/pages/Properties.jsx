@@ -5,7 +5,7 @@ import Layout from '../components/Layout'
 import { isDemoUser, demoProperties } from '../lib/demoData'
 import { usePlan } from '../hooks/usePlan'
 
-const TYPES = ['single_family','multi_family','condo','townhouse','commercial']
+const TYPES = ['single_family','multi_family','duplex','condo','townhouse','commercial']
 
 function PropertyModal({ property, onClose, onSave }) {
   const { user } = useAuth()
@@ -22,7 +22,7 @@ function PropertyModal({ property, onClose, onSave }) {
 
   const handleSave = async (e) => {
     e.preventDefault()
-    if (isDemoUser(user)) { onSave(); return }
+    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); onSave(); return }
     setLoading(true); setError('')
     const payload = { ...form, user_id: user.id, updated_at: new Date().toISOString() }
     const { error } = isEdit

@@ -129,28 +129,33 @@ export default function Reports() {
               </div>
               <div style={{ padding: '20px 24px' }}>
                 <div style={styles.barChart}>
-                  {monthly.map(m => (
-                    <div key={m.label} style={styles.barGroup}>
-                      <div style={styles.barPair}>
-                        <div style={{
-                          ...styles.bar,
-                          height: `${(m.collected / maxBar) * 100}%`,
-                          background: 'var(--accent)',
-                          opacity: 0.85,
-                        }} title={`Collected: ${fmt(m.collected)}`} />
-                        <div style={{
-                          ...styles.bar,
-                          height: `${(m.expenses / maxBar) * 100}%`,
-                          background: 'var(--border)',
-                        }} title={`Expenses: ${fmt(m.expenses)}`} />
+                  {monthly.map(m => {
+                    const BAR_H = 180
+                    const colH = Math.max(Math.round((m.collected / maxBar) * BAR_H), m.collected > 0 ? 3 : 0)
+                    const expH = Math.max(Math.round((m.expenses / maxBar) * BAR_H), m.expenses > 0 ? 3 : 0)
+                    return (
+                      <div key={m.label} style={styles.barGroup}>
+                        <div style={{ ...styles.barPair, height: BAR_H }}>
+                          <div style={{
+                            ...styles.bar,
+                            height: colH,
+                            background: 'var(--accent)',
+                            opacity: 0.85,
+                          }} title={`Collected: ${fmt(m.collected)}`} />
+                          <div style={{
+                            ...styles.bar,
+                            height: expH,
+                            background: '#d1d5db',
+                          }} title={`Expenses: ${fmt(m.expenses)}`} />
+                        </div>
+                        <div style={styles.barLabel}>{m.label}</div>
                       </div>
-                      <div style={styles.barLabel}>{m.label}</div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 <div style={styles.legend}>
                   <span style={{ ...styles.legendDot, background: 'var(--accent)' }} /> Collected
-                  <span style={{ ...styles.legendDot, background: 'var(--border)', marginLeft: 16 }} /> Expenses
+                  <span style={{ ...styles.legendDot, background: '#d1d5db', marginLeft: 16 }} /> Expenses
                 </div>
               </div>
             </div>
@@ -265,16 +270,16 @@ const styles = {
     fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 600, color: 'var(--head)',
   },
   barChart: {
-    display: 'flex', alignItems: 'flex-end', gap: 8, height: 140, marginBottom: 8,
+    display: 'flex', alignItems: 'flex-end', gap: 6, marginBottom: 8,
   },
   barGroup: {
-    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
   },
   barPair: {
-    width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2,
+    width: '100%', display: 'flex', alignItems: 'flex-end', gap: 2,
   },
   bar: {
-    flex: 1, borderRadius: '3px 3px 0 0', minHeight: 2, transition: 'height 0.3s',
+    flex: 1, borderRadius: '3px 3px 0 0', transition: 'height 0.4s ease',
   },
   barLabel: {
     fontSize: 9.5, color: 'var(--muted)', fontWeight: 600, letterSpacing: '0.04em',

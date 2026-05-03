@@ -331,7 +331,7 @@ export default function Payments() {
                       {p.paid_date ? new Date(p.paid_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'capitalize' }}>
-                      {p.payment_method ?? '—'}
+                      {p.payment_method ? p.payment_method.replace(/_/g, ' ') : '—'}
                     </td>
                     <td className="td-mono">{fmt(p.amount)}</td>
                     <td><StatusPill status={p.status} /></td>

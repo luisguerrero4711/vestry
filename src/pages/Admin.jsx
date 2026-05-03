@@ -2,7 +2,24 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { usePlan } from '../hooks/usePlan'
+import { isDemoUser } from '../lib/demoData'
 import Layout from '../components/Layout'
+
+// Mock stats shown when viewing admin as the demo user
+const DEMO_STATS = {
+  users:      { total: 12, by_plan: { free: 7, pro: 3, portfolio: 2 } },
+  mrr:        245,
+  properties: { total: 19 },
+  payments:   { total_collected: 87400, month_collected: 7100 },
+  user_list:  [
+    { id: '1', email: 'alice@example.com',   plan: 'portfolio', is_admin: false, properties: 5, subscribed: true,  joined: '2024-01-10T00:00:00Z' },
+    { id: '2', email: 'bob@example.com',     plan: 'pro',       is_admin: false, properties: 3, subscribed: true,  joined: '2024-03-22T00:00:00Z' },
+    { id: '3', email: 'carol@example.com',   plan: 'free',      is_admin: false, properties: 1, subscribed: false, joined: '2024-06-05T00:00:00Z' },
+    { id: '4', email: 'david@example.com',   plan: 'pro',       is_admin: false, properties: 2, subscribed: true,  joined: '2024-07-18T00:00:00Z' },
+    { id: '5', email: 'emma@example.com',    plan: 'free',      is_admin: false, properties: 1, subscribed: false, joined: '2024-09-01T00:00:00Z' },
+    { id: '6', email: 'demo@vestry.app',     plan: 'portfolio', is_admin: true,  properties: 3, subscribed: false, joined: '2024-01-01T00:00:00Z' },
+  ],
+}
 
 const fmt     = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
 const fmtDate = (s) => s ? new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'
@@ -57,10 +74,19 @@ export default function Admin() {
     if (planLoading) return
     if (!isAdmin) { navigate('/dashboard'); return }
 
+    // Demo users get mock stats so the dashboard is always visible
+    if (isDemoUser(user)) {
+      setStats(DEMO_STATS)
+      setLoading(false)
+      return
+    }
+
     fetch(`/.netlify/functions/admin-stats?userId=${user.id}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) throw new Error(data.error)
+      .then(async r => {
+        const data = await r.json()
+        if (!r.ok || data.error || data.errorMessage) {
+          throw new Error(data.error || data.errorMessage || `Server error ${r.status}`)
+        }
         setStats(data)
         setLoading(false)
       })
