@@ -4,7 +4,7 @@
    Scheme A (Navy + Terracotta) as default
 ────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -13,40 +13,82 @@
 }
 
 :root {
-  /* ── Shared neutrals */
-  --cream:       #FAF8F4;
-  --warm-white:  #FFFFFF;
-  --border:      #E8E2D9;
-  --text:        #1A1714;
-  --muted:       #8A8078;
-  --light-fill:  #F4F0EA;
+  /* ── Hi-fi design tokens — Apple/iOS-inspired ── */
+  --font-display: 'Geist', -apple-system, 'SF Pro Display', sans-serif;
+  --font-text:    'Geist', -apple-system, 'SF Pro Text', sans-serif;
+  --font-mono:    'Geist Mono', 'SF Mono', 'JetBrains Mono', monospace;
 
-  /* ── Scheme A — Navy + Terracotta (default) */
+  /* Surfaces */
+  --bg-page:    oklch(0.985 0.003 250);
+  --bg-elev-1:  oklch(1 0 0);
+  --bg-elev-2:  oklch(0.98 0.003 250);
+  --bg-tint:    oklch(0.96 0.005 250);
+
+  /* Ink */
+  --text-1:   oklch(0.18 0.01 260);
+  --text-2:   oklch(0.42 0.01 260);
+  --text-3:   oklch(0.62 0.005 260);
+  --text-inv: oklch(1 0 0);
+
+  /* Borders */
+  --line:        oklch(0.92 0.005 250);
+  --line-strong: oklch(0.86 0.008 250);
+
+  /* Brand — iOS blue */
+  --brand:         oklch(0.62 0.18 255);
+  --brand-tint:    oklch(0.96 0.04 255);
+  --brand-pressed: oklch(0.55 0.18 255);
+
+  /* Status */
+  --green:      oklch(0.68 0.15 155);
+  --green-tint: oklch(0.95 0.05 155);
+  --amber:      oklch(0.78 0.15 75);
+  --amber-tint: oklch(0.97 0.05 75);
+  --red:        oklch(0.62 0.2 25);
+  --red-tint:   oklch(0.96 0.04 25);
+
+  /* Radii */
+  --r-xs: 6px;   --r-sm: 10px;  --r-md: 14px;
+  --r-lg: 20px;  --r-xl: 28px;
+
+  /* Shadows */
+  --shadow-sm:   0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+  --shadow-md:   0 1px 2px rgba(15,23,42,.04), 0 4px 12px rgba(15,23,42,.08);
+  --shadow-lg:   0 4px 12px rgba(15,23,42,.06), 0 12px 36px rgba(15,23,42,.10);
+  --shadow-card: 0 0 0 0.5px var(--line), 0 1px 2px rgba(15,23,42,.04), 0 2px 6px rgba(15,23,42,.04);
+
+  /* ── Legacy tokens (used by auth/pricing pages) ── */
+  --cream:       oklch(0.985 0.003 250);
+  --warm-white:  oklch(1 0 0);
+  --border:      oklch(0.92 0.005 250);
+  --text:        oklch(0.18 0.01 260);
+  --muted:       oklch(0.62 0.005 260);
+  --light-fill:  oklch(0.96 0.005 250);
   --nav:        #1B2B3A;
   --accent:     #C0614A;
   --accent2:    #E8937F;
-  --head:       #1B2B3A;
+  --head:       oklch(0.18 0.01 260);
   --tag-bg:     #FBF0ED;
   --tag-fg:     #C0614A;
-  --btn:        #1B2B3A;
-  --btn-fg:     #FAF8F4;
+  --btn:        oklch(0.18 0.01 260);
+  --btn-fg:     oklch(1 0 0);
   --cta:        #C0614A;
   --cta-fg:     #FFFFFF;
-  --stat-col:   #C0614A;
-  --pill-bg:    #FBF0ED;
-  --pill-bd:    #E8C4BA;
-  --pill-fg:    #C0614A;
-  --card-hd:    #1B2B3A;
-  --paid:       #059669;
-  --paid-bg:    #ECFDF5;
-  --due:        #B45309;
-  --due-bg:     #FFFBEB;
-  --late:       #DC2626;
-  --late-bg:    #FEF2F2;
-  --sidebar:    #F7F3EE;
-  --active-bg:  #FBF0ED;
-  --active-fg:  #C0614A;
-  --link:       #1B2B3A;
+  --stat-col:   oklch(0.62 0.18 255);
+  --pill-bg:    var(--bg-tint);
+  --pill-bd:    var(--line);
+  --pill-fg:    var(--text-2);
+  --card-hd:    oklch(0.18 0.01 260);
+  --paid:       oklch(0.68 0.15 155);
+  --paid-bg:    oklch(0.95 0.05 155);
+  --due:        oklch(0.78 0.15 75);
+  --due-bg:     oklch(0.97 0.05 75);
+  --late:       oklch(0.62 0.2 25);
+  --late-bg:    oklch(0.96 0.04 25);
+  --sidebar:    oklch(0.985 0.003 250);
+  --active-bg:  var(--brand-tint);
+  --active-fg:  var(--brand);
+  --link:       oklch(0.62 0.18 255);
 }
 
 html, body, #root {
@@ -54,9 +96,9 @@ html, body, #root {
 }
 
 body {
-  background: var(--cream);
-  color: var(--text);
-  font-family: 'Outfit', sans-serif;
+  background: var(--bg-page);
+  color: var(--text-1);
+  font-family: var(--font-text);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -68,10 +110,10 @@ body {
 }
 
 h1, h2, h3 {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-display);
   font-weight: 600;
-  color: var(--head);
-  letter-spacing: -0.01em;
+  color: var(--text-1);
+  letter-spacing: -0.02em;
 }
 
 /* ── Utility */

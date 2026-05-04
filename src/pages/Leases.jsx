@@ -1,302 +1,292 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
-import StatusPill from '../components/StatusPill'
-import { isDemoUser, demoLeases, demoProperties, demoTenants } from '../lib/demoData'
+import { isDemoUser } from '../lib/demoData'
+import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
 
-const fmt = (n) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
+const AVATAR_COLORS = ['#FF6B6B','#4ECDC4','#FFD93D','#A78BFA','#60A5FA','#34D399','#F472B6','#FB923C']
 
-function LeaseModal({ lease, properties, tenants, onClose, onSave }) {
-  const { user } = useAuth()
-  const isEdit   = !!lease?.id
-  const [form, setForm] = useState({
-    property_id: '', tenant_id: '', start_date: '', end_date: '',
-    monthly_rent: '', security_deposit: '', status: 'active', notes: '',
-    due_day: 1, reminder_days: 3,
-    ...lease,
-  })
-  const [file, setFile]       = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    setLoading(true); setError('')
-
-    let pdf_url = form.pdf_url ?? null
-
-    // Upload PDF to Supabase Storage if provided
-    if (file) {
-      const path = `${user.id}/${Date.now()}-${file.name}`
-      const { error: upErr } = await supabase.storage
-        .from('vestry-leases')
-        .upload(path, file, { upsert: true })
-      if (upErr) { setError('PDF upload failed: ' + upErr.message); setLoading(false); return }
-      const { data: { publicUrl } } = supabase.storage.from('vestry-leases').getPublicUrl(path)
-      pdf_url = publicUrl
-    }
-
-    const payload = {
-      ...form,
-      pdf_url,
-      user_id:          user.id,
-      monthly_rent:     Number(form.monthly_rent),
-      security_deposit: form.security_deposit ? Number(form.security_deposit) : null,
-      tenant_id:  form.tenant_id  || null,
-      unit_id:    null,
-      end_date:   form.end_date   || null,
-    }
-
-    const { error } = isEdit
-      ? await supabase.from('leases').update(payload).eq('id', lease.id)
-      : await supabase.from('leases').insert(payload)
-    if (error) { setError(error.message); setLoading(false); return }
-    onSave()
-  }
-
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-header">
-          <div className="modal-title">{isEdit ? 'Edit Lease' : 'Add Lease'}</div>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <form onSubmit={handleSave}>
-          <div className="modal-body">
-            {error && <div className="alert alert-error">{error}</div>}
-
-            <div className="form-group">
-              <label className="form-label">Property *</label>
-              <select className="form-select" required
-                value={form.property_id} onChange={e => set('property_id', e.target.value)}>
-                <option value="">— Select property —</option>
-                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Tenant</label>
-              <select className="form-select"
-                value={form.tenant_id} onChange={e => set('tenant_id', e.target.value)}>
-                <option value="">— Select tenant —</option>
-                {tenants.map(t => <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>)}
-              </select>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Start Date *</label>
-                <input type="date" className="form-input" required
-                  value={form.start_date} onChange={e => set('start_date', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">End Date</label>
-                <input type="date" className="form-input"
-                  value={form.end_date} onChange={e => set('end_date', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Monthly Rent *</label>
-                <input type="number" className="form-input" placeholder="1500" min={0} required
-                  value={form.monthly_rent} onChange={e => set('monthly_rent', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Security Deposit</label>
-                <input type="number" className="form-input" placeholder="1500" min={0}
-                  value={form.security_deposit} onChange={e => set('security_deposit', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select className="form-select"
-                value={form.status} onChange={e => set('status', e.target.value)}>
-                <option value="active">Active</option>
-                <option value="expired">Expired</option>
-                <option value="terminated">Terminated</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Lease PDF</label>
-              <input type="file" accept="application/pdf"
-                style={{ fontSize: 13, color: 'var(--muted)' }}
-                onChange={e => setFile(e.target.files[0])} />
-              {form.pdf_url && !file && (
-                <a href={form.pdf_url} target="_blank" rel="noreferrer"
-                  style={{ fontSize: 12, color: 'var(--accent)', marginTop: 4, display: 'block' }}>
-                  📄 View current lease PDF
-                </a>
-              )}
-            </div>
-
-            {/* Stripe / reminder settings */}
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Rent Due Day</label>
-                <select className="form-select"
-                  value={form.due_day} onChange={e => set('due_day', Number(e.target.value))}>
-                  <option value={1}>1st of month</option>
-                  <option value={15}>15th of month</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Reminder (days before)</label>
-                <select className="form-select"
-                  value={form.reminder_days} onChange={e => set('reminder_days', Number(e.target.value))}>
-                  <option value={1}>1 day before</option>
-                  <option value={2}>2 days before</option>
-                  <option value={3}>3 days before</option>
-                  <option value={5}>5 days before</option>
-                  <option value={7}>7 days before</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Notes</label>
-              <textarea className="form-textarea" placeholder="Any notes…"
-                value={form.notes} onChange={e => set('notes', e.target.value)} />
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Add lease'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+function avatarColor(name = '') {
+  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length]
 }
+
+function initials(name = '') {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+}
+
+function leaseProgress(start, end) {
+  const s = new Date(start).getTime()
+  const e = new Date(end).getTime()
+  const now = Date.now()
+  if (isNaN(s) || isNaN(e) || e <= s) return 0
+  return Math.min(100, Math.max(0, Math.round(((now - s) / (e - s)) * 100)))
+}
+
+function daysRemaining(end) {
+  const e = new Date(end).getTime()
+  const diff = Math.round((e - Date.now()) / 86400000)
+  return diff > 0 ? diff : 0
+}
+
+function statusTone(lease) {
+  if (!lease.end_date) return 'neutral'
+  const days = daysRemaining(lease.end_date)
+  if (days <= 60) return 'warn'
+  if (days <= 0) return 'danger'
+  return 'success'
+}
+
+const demoLeases = [
+  {
+    id: 1,
+    ref: 'LSE-2025-0118',
+    tenant: 'Sarah Chen',
+    property: 'Oak Street Duplex · Unit A',
+    addr: '418 Oak St, Unit A · Portland, OR',
+    start_date: '2025-07-01',
+    end_date: '2026-06-30',
+    monthly_rent: 1450,
+    deposit: 1800,
+    status: 'active',
+  },
+  {
+    id: 2,
+    ref: 'LSE-2024-0072',
+    tenant: 'Marcus Williams',
+    property: 'Oak Street Duplex · Unit B',
+    addr: '418 Oak St, Unit B · Portland, OR',
+    start_date: '2024-08-01',
+    end_date: '2026-07-31',
+    monthly_rent: 1200,
+    deposit: 1500,
+    status: 'active',
+  },
+  {
+    id: 3,
+    ref: 'LSE-2025-0203',
+    tenant: 'Priya Patel',
+    property: 'Riverside Condo',
+    addr: '22 Marina Blvd #14 · Portland, OR',
+    start_date: '2025-05-01',
+    end_date: '2026-04-30',
+    monthly_rent: 1800,
+    deposit: 2200,
+    status: 'active',
+  },
+]
 
 export default function Leases() {
   const { user } = useAuth()
-  const [leases, setLeases]   = useState([])
-  const [properties, setProps] = useState([])
-  const [tenants, setTens]    = useState([])
+  const navigate = useNavigate()
+  const [leases, setLeases] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal]     = useState(null)
+  const [selected, setSelected] = useState(null)
 
-  const fetchData = async () => {
-    setLoading(true)
-    if (isDemoUser(user)) {
-      setLeases(demoLeases)
-      setProps(demoProperties.map(p => ({ id: p.id, name: p.name })))
-      setTens(demoTenants.map(t => ({ id: t.id, first_name: t.first_name, last_name: t.last_name })))
+  useEffect(() => {
+    if (!user) { navigate('/auth'); return }
+    async function load() {
+      if (isDemoUser(user)) {
+        setLeases(demoLeases)
+        setSelected(demoLeases[0])
+      } else {
+        const { data } = await supabase.from('leases').select('*').eq('user_id', user.id).order('start_date', { ascending: false })
+        const ls = data || []
+        setLeases(ls)
+        if (ls.length > 0) setSelected(ls[0])
+      }
       setLoading(false)
-      return
     }
-    const [{ data: ls }, { data: ps }, { data: ts }] = await Promise.all([
-      supabase.from('leases')
-        .select('*, properties(name), tenants(first_name,last_name)')
-        .eq('user_id', user.id)
-        .order('start_date', { ascending: false }),
-      supabase.from('properties').select('id,name').eq('user_id', user.id),
-      supabase.from('tenants').select('id,first_name,last_name').eq('user_id', user.id),
-    ])
-    setLeases(ls ?? [])
-    setProps(ps ?? [])
-    setTens(ts ?? [])
-    setLoading(false)
-  }
+    load()
+  }, [user, navigate])
 
-  useEffect(() => { if (user) fetchData() }, [user])
-
-  const handleDelete = async (id) => {
-    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
-    if (!window.confirm('Delete this lease?')) return
-    await supabase.from('leases').delete().eq('id', id)
-    fetchData()
-  }
+  const lease = selected
 
   return (
     <Layout>
-      <div className="page">
-        <div className="page-header">
+      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Leases</h1>
-            <p className="page-subtitle">Store and manage signed lease agreements</p>
+            <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500, marginBottom: 4 }}>{leases.length} active leases</div>
+            <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Leases</h1>
           </div>
-          <button className="btn btn-accent" onClick={() => setModal('new')}>+ Add Lease</button>
+          <button style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', background: VT.brand, border: 'none',
+            borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+          }}><VIcon.Plus s={14} c="#fff" /> New lease</button>
         </div>
 
-        {loading ? <div className="spinner" /> : leases.length === 0 ? (
-          <div className="card">
-            <div className="empty-state">
-              <div className="empty-icon">📄</div>
-              <div className="empty-title">No leases yet</div>
-              <div className="empty-sub">Upload signed lease PDFs for your tenants.</div>
-              <button className="btn btn-primary" onClick={() => setModal('new')}>Add first lease</button>
-            </div>
-          </div>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>Loading leases…</div>
         ) : (
-          <div className="card">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Property</th>
-                  <th>Tenant</th>
-                  <th>Term</th>
-                  <th>Monthly Rent</th>
-                  <th>Deposit</th>
-                  <th>Status</th>
-                  <th>PDF</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {leases.map(l => (
-                  <tr key={l.id}>
-                    <td className="td-primary">{l.properties?.name ?? '—'}</td>
-                    <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                      {l.tenants ? `${l.tenants.first_name} ${l.tenants.last_name}` : '—'}
-                    </td>
-                    <td style={{ fontSize: 12 }}>
-                      {new Date(l.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                      {l.end_date ? ` → ${new Date(l.end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ' → Month-to-month'}
-                    </td>
-                    <td className="td-mono">{fmt(l.monthly_rent)}</td>
-                    <td style={{ fontSize: 12.5 }}>{l.security_deposit ? fmt(l.security_deposit) : '—'}</td>
-                    <td><StatusPill status={l.status} /></td>
-                    <td>
-                      {l.pdf_url
-                        ? <a href={l.pdf_url} target="_blank" rel="noreferrer"
-                            style={{ color: 'var(--accent)', fontSize: 12.5, textDecoration: 'none' }}>📄 View</a>
-                        : <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setModal(l)}>Edit</button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--late)' }}
-                          onClick={() => handleDelete(l.id)}>Del</button>
+          <div style={{ display: 'grid', gridTemplateColumns: lease ? '1fr 360px' : '1fr', gap: 16 }}>
+            {/* Lease list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {leases.map(l => {
+                const pct = leaseProgress(l.start_date, l.end_date)
+                const days = daysRemaining(l.end_date)
+                const tone = statusTone(l)
+                const isSelected = selected?.id === l.id
+
+                return (
+                  <div
+                    key={l.id}
+                    onClick={() => setSelected(l)}
+                    style={{
+                      background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard,
+                      padding: 20, cursor: 'pointer',
+                      outline: isSelected ? `2px solid var(--brand)` : 'none',
+                      outlineOffset: 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <VAvatar initials={initials(l.tenant || l.tenant_name || 'T')} size={40} color={avatarColor(l.tenant || l.tenant_name || 'T')} />
+                        <div>
+                          <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{l.tenant || l.tenant_name || 'Tenant'}</div>
+                          <div style={{ fontSize: 12, color: VT.text2, fontWeight: 500, marginTop: 2 }}>{l.property || l.property_name || '—'}</div>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                        <VPill tone={tone}>{days <= 60 ? `${days}d left` : 'Active'}</VPill>
+                        <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>
+                          ${Number(l.monthly_rent || 0).toLocaleString()}/mo
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div>
+                      <div style={{ position: 'relative', height: 6, background: VT.tint, borderRadius: 999, overflow: 'hidden' }}>
+                        <div style={{
+                          position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`,
+                          background: `linear-gradient(90deg, var(--brand), oklch(0.55 0.22 280))`,
+                          borderRadius: 999,
+                        }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: VT.text3, fontWeight: 500 }}>
+                        <span>{l.start_date ? new Date(l.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                        <span>{pct}% complete</span>
+                        <span>{l.end_date ? new Date(l.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {leases.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>No leases yet</div>
+              )}
+            </div>
+
+            {/* Detail panel */}
+            {lease && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Header card */}
+                <div style={{ background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard, padding: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{
+                      fontFamily: VT.fontMono, fontSize: 11, fontWeight: 600, color: VT.text3,
+                      background: VT.tint, padding: '3px 7px', borderRadius: 5,
+                    }}>{lease.ref || 'LSE-—'}</span>
+                    <VPill tone={statusTone(lease)}>
+                      {daysRemaining(lease.end_date) <= 60 ? `${daysRemaining(lease.end_date)}d left` : 'Active'}
+                    </VPill>
+                  </div>
+                  <div style={{ fontFamily: VT.fontDisplay, fontSize: 18, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 4 }}>
+                    12-month residential lease
+                  </div>
+                  <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500 }}>
+                    {lease.tenant || lease.tenant_name} · {lease.addr || lease.property || '—'}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                    <button style={{
+                      flex: 1, padding: '8px', background: VT.tint, border: 'none',
+                      borderRadius: 8, fontSize: 13, fontWeight: 600, color: VT.text1, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}><VIcon.Download s={13} /> PDF</button>
+                    <button style={{
+                      flex: 1, padding: '8px', background: VT.brand, border: 'none',
+                      borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+                    }}><VIcon.Sparkle s={13} c="#fff" /> Renew</button>
+                  </div>
+                </div>
+
+                <VSection title="Parties">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: VT.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Landlord</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <VAvatar initials="LG" size={34} color="#A78BFA" />
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>Luis Guerrero</div>
+                          <div style={{ fontSize: 11, color: VT.text3, fontWeight: 500 }}>Owner</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ height: 1, background: VT.line }} />
+                    <div>
+                      <div style={{ fontSize: 11, color: VT.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Tenant</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <VAvatar initials={initials(lease.tenant || lease.tenant_name || 'T')} size={34} color={avatarColor(lease.tenant || lease.tenant_name || 'T')} />
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{lease.tenant || lease.tenant_name || 'Tenant'}</div>
+                          <div style={{ fontSize: 11, color: VT.text3, fontWeight: 500 }}>Primary occupant</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </VSection>
+
+                <VSection title="Financials">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[
+                      ['Monthly rent', `$${Number(lease.monthly_rent || 0).toLocaleString()}`],
+                      ['Security deposit', `$${Number(lease.deposit || 0).toLocaleString()}`],
+                      ['Late fee', '$50 after 5 days'],
+                      ['Rent escalation', 'None'],
+                    ].map(([k, v]) => (
+                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                        <span style={{ fontSize: 12, color: VT.text3, fontWeight: 500 }}>{k}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: VT.text1, letterSpacing: '-0.01em' }}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: `1px solid ${VT.line}`, paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>Lease value</span>
+                      <span style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>
+                        ${(Number(lease.monthly_rent || 0) * 12).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </VSection>
+
+                <VSection title="Key terms">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[
+                      ['Term length', '12 months'],
+                      ['Renewal', 'Auto · month-to-month'],
+                      ['Notice to vacate', '30 days'],
+                      ['Pets', 'Per agreement'],
+                      ['Smoking', 'Not permitted'],
+                    ].map(([k, v]) => (
+                      <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                        <span style={{ fontSize: 12, color: VT.text3, fontWeight: 500 }}>{k}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: VT.text1, letterSpacing: '-0.01em', textAlign: 'right' }}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </VSection>
+              </div>
+            )}
           </div>
         )}
       </div>
-
-      {modal && (
-        <LeaseModal
-          lease={modal === 'new' ? null : modal}
-          properties={properties}
-          tenants={tenants}
-          onClose={() => setModal(null)}
-          onSave={() => { setModal(null); fetchData() }}
-        />
-      )}
     </Layout>
   )
 }

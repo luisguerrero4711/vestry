@@ -1,336 +1,164 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
-import StatusPill from '../components/StatusPill'
-import { isDemoUser, demoTenants, demoProperties } from '../lib/demoData'
+import { isDemoUser, demoTenants } from '../lib/demoData'
+import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
 
-function TenantModal({ tenant, properties, onClose, onSave }) {
-  const { user } = useAuth()
-  const isEdit   = !!tenant?.id
-  const [form, setForm] = useState({
-    first_name: '', last_name: '', email: '', phone: '',
-    property_id: '', unit_id: '',
-    move_in_date: '', move_out_date: '',
-    emergency_contact_name: '', emergency_contact_phone: '',
-    status: 'active', notes: '',
-    ...tenant,
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+const AVATAR_COLORS = ['#FF6B6B','#4ECDC4','#FFD93D','#A78BFA','#60A5FA','#34D399','#F472B6','#FB923C']
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+function avatarColor(name = '') {
+  const idx = (name.charCodeAt(0) || 0) % AVATAR_COLORS.length
+  return AVATAR_COLORS[idx]
+}
 
-  const handleSave = async (e) => {
-    e.preventDefault()
-    if (isDemoUser(user)) { onSave(); return }
-    setLoading(true); setError('')
-    const payload = { ...form, user_id: user.id, updated_at: new Date().toISOString() }
-    // coerce empty strings to null for FK fields
-    if (!payload.property_id) payload.property_id = null
-    if (!payload.unit_id)     payload.unit_id     = null
-
-    const { error } = isEdit
-      ? await supabase.from('tenants').update(payload).eq('id', tenant.id)
-      : await supabase.from('tenants').insert(payload)
-    if (error) { setError(error.message); setLoading(false); return }
-    onSave()
-  }
-
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-header">
-          <div className="modal-title">{isEdit ? 'Edit Tenant' : 'Add Tenant'}</div>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <form onSubmit={handleSave}>
-          <div className="modal-body">
-            {error && <div className="alert alert-error">{error}</div>}
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">First Name *</label>
-                <input className="form-input" placeholder="Maria"
-                  value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Last Name *</label>
-                <input className="form-input" placeholder="Rivera"
-                  value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input type="email" className="form-input" placeholder="tenant@example.com"
-                  value={form.email} onChange={e => set('email', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Phone</label>
-                <input className="form-input" placeholder="(555) 123-4567"
-                  value={form.phone} onChange={e => set('phone', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Property</label>
-              <select className="form-select"
-                value={form.property_id} onChange={e => set('property_id', e.target.value)}>
-                <option value="">— Select property —</option>
-                {properties.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Move-in Date</label>
-                <input type="date" className="form-input"
-                  value={form.move_in_date} onChange={e => set('move_in_date', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Move-out Date</label>
-                <input type="date" className="form-input"
-                  value={form.move_out_date} onChange={e => set('move_out_date', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Emergency Contact</label>
-                <input className="form-input" placeholder="Name"
-                  value={form.emergency_contact_name}
-                  onChange={e => set('emergency_contact_name', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Emergency Phone</label>
-                <input className="form-input" placeholder="(555) 000-0000"
-                  value={form.emergency_contact_phone}
-                  onChange={e => set('emergency_contact_phone', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select className="form-select"
-                value={form.status} onChange={e => set('status', e.target.value)}>
-                <option value="active">Active</option>
-                <option value="past">Past</option>
-                <option value="prospect">Prospect</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Notes</label>
-              <textarea className="form-textarea" placeholder="Any notes about this tenant…"
-                value={form.notes} onChange={e => set('notes', e.target.value)} />
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Add tenant'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+function initials(name = '') {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
 }
 
 export default function Tenants() {
   const { user } = useAuth()
-  const [tenants, setTenants]     = useState([])
-  const [properties, setProps]    = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [modal, setModal]         = useState(null)
-  const [filter, setFilter]       = useState('active')
+  const navigate = useNavigate()
+  const [tenants, setTenants] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
-  const fetchData = async () => {
-    setLoading(true)
-    if (isDemoUser(user)) {
-      setTenants(demoTenants)
-      setProps(demoProperties.map(p => ({ id: p.id, name: p.name })))
+  useEffect(() => {
+    if (!user) { navigate('/auth'); return }
+    async function load() {
+      if (isDemoUser(user)) {
+        setTenants(demoTenants || demoFallback)
+      } else {
+        const { data } = await supabase.from('tenants').select('*').eq('user_id', user.id).order('name')
+        setTenants(data || [])
+      }
       setLoading(false)
-      return
     }
-    const [{ data: t }, { data: p }] = await Promise.all([
-      supabase.from('tenants')
-        .select('*, properties(name,city,state)')
-        .eq('user_id', user.id)
-        .order('last_name'),
-      supabase.from('properties').select('id,name').eq('user_id', user.id),
-    ])
-    setTenants(t ?? [])
-    setProps(p ?? [])
-    setLoading(false)
-  }
+    load()
+  }, [user, navigate])
 
-  useEffect(() => { if (user) fetchData() }, [user])
+  const demoFallback = [
+    { id: 1, name: 'Sarah Chen',      email: 'sarah.chen@email.com',   phone: '(503) 555-0142', property: 'Oak Street Duplex · Unit A', status: 'active', rent: 1450, onTime: 94 },
+    { id: 2, name: 'Marcus Williams', email: 'marcus.w@email.com',     phone: '(503) 555-0187', property: 'Oak Street Duplex · Unit B', status: 'active', rent: 1200, onTime: 88 },
+    { id: 3, name: 'Priya Patel',     email: 'priya.p@email.com',      phone: '(503) 555-0293', property: 'Riverside Condo',            status: 'late',   rent: 1800, onTime: 75 },
+  ]
 
-  const handleDelete = async (id) => {
-    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
-    if (!window.confirm('Delete this tenant? This cannot be undone.')) return
-    await supabase.from('tenants').delete().eq('id', id)
-    fetchData()
-  }
-
-  const filtered = tenants.filter(t => filter === 'all' || t.status === filter)
+  const filtered = tenants.filter(t => {
+    const name = t.name || `${t.first_name || ''} ${t.last_name || ''}`.trim()
+    return name.toLowerCase().includes(search.toLowerCase()) || (t.email || '').toLowerCase().includes(search.toLowerCase())
+  })
 
   return (
     <Layout>
-      <div className="page">
-        <div className="page-header">
+      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Tenants</h1>
-            <p className="page-subtitle">{tenants.filter(t => t.status === 'active').length} active tenants</p>
+            <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500, marginBottom: 4 }}>{tenants.length} tenants · {tenants.filter(t => t.status === 'active' || !t.status).length} active</div>
+            <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Tenants</h1>
           </div>
-          <button className="btn btn-accent" onClick={() => setModal('new')}>
-            + Add Tenant
-          </button>
-        </div>
-
-        {/* Filter tabs */}
-        <div style={styles.filterRow}>
-          {['active','past','all'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ ...styles.filterBtn, ...(filter === f ? styles.filterActive : {}) }}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', pointerEvents: 'none' }}>
+                <VIcon.Search s={14} c="var(--text-3)" />
+              </div>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search tenants…"
+                style={{
+                  padding: '8px 12px 8px 32px',
+                  background: VT.card, border: `1px solid ${VT.line}`,
+                  borderRadius: 8, fontFamily: VT.fontText, fontSize: 13,
+                  color: VT.text1, outline: 'none', fontWeight: 500, width: 220,
+                }}
+              />
+            </div>
+            <button style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', background: VT.brand, border: 'none',
+              borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+            }}><VIcon.Plus s={14} c="#fff" /> Add tenant</button>
+          </div>
         </div>
 
         {loading ? (
-          <div className="spinner" />
+          <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>Loading tenants…</div>
         ) : filtered.length === 0 ? (
-          <div className="card">
-            <div className="empty-state">
-              <div className="empty-icon">👤</div>
-              <div className="empty-title">No tenants here</div>
-              <div className="empty-sub">
-                {filter === 'active' ? 'Add active tenants to track rent and leases.' : 'No tenants in this filter.'}
-              </div>
-              {filter === 'active' && (
-                <button className="btn btn-primary" onClick={() => setModal('new')}>
-                  Add first tenant
-                </button>
-              )}
-            </div>
-          </div>
+          <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>No tenants found</div>
         ) : (
-          <div className="card">
-            <table className="data-table">
+          <div style={{ background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr>
-                  <th>Tenant</th>
-                  <th>Property</th>
-                  <th>Move-in</th>
-                  <th>Contact</th>
-                  <th>Status</th>
-                  <th></th>
+                <tr style={{ background: VT.tint }}>
+                  {['Tenant', 'Contact', 'Property', 'Monthly rent', 'On-time', 'Status', ''].map((h, i) => (
+                    <th key={i} style={{
+                      textAlign: 'left', padding: '10px 20px',
+                      fontSize: 11, fontWeight: 600, color: VT.text3,
+                      textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+                    }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(t => (
-                  <tr key={t.id}>
-                    <td>
-                      <div style={styles.tenantName}>
-                        <div style={styles.avatar}>
-                          {t.first_name[0]}{t.last_name[0]}
+                {filtered.map((t, i) => {
+                  const name = t.name || `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'Unknown'
+                  const email = t.email || '—'
+                  const phone = t.phone || t.phone_number || '—'
+                  const property = t.property || t.property_name || '—'
+                  const rent = t.rent || t.monthly_rent || 0
+                  const onTime = t.onTime || t.on_time_rate || '—'
+                  const status = t.status || 'active'
+                  const tone = status === 'active' ? 'success' : status === 'late' ? 'danger' : 'warn'
+
+                  return (
+                    <tr key={t.id || i} style={{ borderTop: `1px solid ${VT.line}`, cursor: 'pointer' }}>
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <VAvatar initials={initials(name)} size={38} color={avatarColor(name)} />
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em' }}>{name}</div>
+                            <div style={{ fontSize: 12, color: VT.text3, fontWeight: 500, marginTop: 1 }}>Since Jul 2023</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="td-primary">{t.first_name} {t.last_name}</div>
-                          {t.email && <div className="td-secondary">{t.email}</div>}
+                      </td>
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: VT.text2, fontWeight: 500 }}>
+                            <VIcon.Mail s={12} /> {email}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: VT.text2, fontWeight: 500 }}>
+                            <VIcon.Phone s={12} /> {phone}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>
-                      {t.properties?.name ?? '—'}
-                    </td>
-                    <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>
-                      {t.move_in_date
-                        ? new Date(t.move_in_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                        : '—'}
-                    </td>
-                    <td style={{ fontSize: 12.5 }}>{t.phone || '—'}</td>
-                    <td><StatusPill status={t.status} /></td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setModal(t)}>Edit</button>
-                        <button className="btn btn-ghost btn-sm"
-                          style={{ color: 'var(--late)' }}
-                          onClick={() => handleDelete(t.id)}>Del</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: VT.text2, fontWeight: 500 }}>{property}</td>
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>
+                          {rent > 0 ? `$${Number(rent).toLocaleString()}` : '—'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: typeof onTime === 'number' && onTime >= 90 ? VT.green : VT.amber }}>
+                          {typeof onTime === 'number' ? `${onTime}%` : onTime}
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 20px' }}>
+                        <VPill tone={tone}>{status === 'active' ? 'Active' : status === 'late' ? 'Late' : 'Inactive'}</VPill>
+                      </td>
+                      <td style={{ padding: '16px 16px', textAlign: 'right' }}>
+                        <VIcon.Chevron s={14} c="var(--text-3)" />
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
-
-      {modal && (
-        <TenantModal
-          tenant={modal === 'new' ? null : modal}
-          properties={properties}
-          onClose={() => setModal(null)}
-          onSave={() => { setModal(null); fetchData() }}
-        />
-      )}
     </Layout>
   )
-}
-
-const styles = {
-  filterRow: {
-    display: 'flex',
-    gap: 6,
-    marginBottom: 20,
-    background: 'var(--warm-white)',
-    border: '1px solid var(--border)',
-    borderRadius: 10,
-    padding: 4,
-    width: 'fit-content',
-  },
-  filterBtn: {
-    padding: '7px 16px',
-    border: 'none',
-    borderRadius: 7,
-    background: 'transparent',
-    color: 'var(--muted)',
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: 'pointer',
-    fontFamily: "'Outfit', sans-serif",
-    transition: 'background 0.15s, color 0.15s',
-  },
-  filterActive: {
-    background: 'var(--active-bg)',
-    color: 'var(--active-fg)',
-    fontWeight: 600,
-  },
-  tenantName: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    background: 'var(--light-fill)',
-    border: '1px solid var(--border)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 11,
-    fontWeight: 700,
-    color: 'var(--muted)',
-    flexShrink: 0,
-  },
 }

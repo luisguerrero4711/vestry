@@ -1,426 +1,232 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
-import StatusPill from '../components/StatusPill'
-import { isDemoUser, demoPayments, demoProperties, demoTenants } from '../lib/demoData'
-import { usePlan } from '../hooks/usePlan'
+import { isDemoUser } from '../lib/demoData'
+import { VT, VIcon, VPill, VAvatar } from '../lib/vestry-shared'
 
-const fmt = (n) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
-
-const METHODS = ['cash','check','venmo','zelle','bank_transfer','other']
-
-// ── Payment Modal ─────────────────────────────────────────────────────────────
-function PaymentModal({ payment, properties, tenants, onClose, onSave }) {
-  const { user } = useAuth()
-  const isEdit   = !!payment?.id
-  const [form, setForm] = useState({
-    property_id: '', tenant_id: '', amount: '', due_date: '',
-    paid_date: '', payment_method: 'cash', status: 'due', notes: '',
-    ...payment,
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    if (isDemoUser(user)) { onSave(); return }
-    setLoading(true); setError('')
-    const payload = {
-      ...form,
-      user_id: user.id,
-      amount: Number(form.amount),
-      tenant_id: form.tenant_id || null,
-      unit_id: null,
-    }
-    const { error } = isEdit
-      ? await supabase.from('rent_payments').update(payload).eq('id', payment.id)
-      : await supabase.from('rent_payments').insert(payload)
-    if (error) { setError(error.message); setLoading(false); return }
-    onSave()
-  }
-
+// Monthly bar chart
+function MonthlyBars({ months }) {
+  const chartH = 90
+  const maxV = Math.max(...months.map(m => m.expected), 1)
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-header">
-          <div className="modal-title">{isEdit ? 'Edit Payment' : 'Log Payment'}</div>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <form onSubmit={handleSave}>
-          <div className="modal-body">
-            {error && <div className="alert alert-error">{error}</div>}
-
-            <div className="form-group">
-              <label className="form-label">Property *</label>
-              <select className="form-select" required
-                value={form.property_id} onChange={e => set('property_id', e.target.value)}>
-                <option value="">— Select property —</option>
-                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Tenant</label>
-              <select className="form-select"
-                value={form.tenant_id} onChange={e => set('tenant_id', e.target.value)}>
-                <option value="">— Select tenant —</option>
-                {tenants
-                  .filter(t => !form.property_id || t.property_id === form.property_id)
-                  .map(t => (
-                    <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Amount *</label>
-                <input type="number" className="form-input" placeholder="1500" min={0} step="0.01"
-                  value={form.amount} onChange={e => set('amount', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Due Date *</label>
-                <input type="date" className="form-input" required
-                  value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: chartH, paddingBottom: 4, borderBottom: `1px solid ${VT.line}` }}>
+        {months.map((m) => {
+          const recH = (m.received / maxV) * chartH
+          const expH = (m.expected / maxV) * chartH
+          return (
+            <div key={m.m} style={{ display: 'flex', alignItems: 'flex-end', gap: 0 }}>
+              <div style={{ position: 'relative', width: 28, height: chartH, display: 'flex', alignItems: 'flex-end' }}>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: expH, background: VT.tint, borderRadius: 4 }} />
+                <div style={{
+                  position: 'relative', width: '100%', height: recH,
+                  background: recH < expH ? 'linear-gradient(180deg, var(--brand), var(--brand-pressed))' : 'var(--brand)',
+                  borderRadius: 4,
+                }} />
               </div>
             </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <select className="form-select"
-                  value={form.status} onChange={e => set('status', e.target.value)}>
-                  <option value="due">Due</option>
-                  <option value="paid">Paid</option>
-                  <option value="overdue">Overdue</option>
-                  <option value="partial">Partial</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Paid Date</label>
-                <input type="date" className="form-input"
-                  value={form.paid_date} onChange={e => set('paid_date', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Payment Method</label>
-              <select className="form-select"
-                value={form.payment_method} onChange={e => set('payment_method', e.target.value)}>
-                {METHODS.map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Notes</label>
-              <textarea className="form-textarea" placeholder="Any notes…"
-                value={form.notes} onChange={e => set('notes', e.target.value)} />
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Log payment'}
-            </button>
-          </div>
-        </form>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 6 }}>
+        {months.map(m => (
+          <div key={m.m} style={{ width: 28, textAlign: 'center', fontSize: 11, color: VT.text3, fontWeight: 600 }}>{m.m}</div>
+        ))}
       </div>
     </div>
   )
 }
 
-// ── Stripe action helpers ─────────────────────────────────────────────────────
-function useStripeActions(fetchData) {
-  const [loadingId, setLoadingId] = useState(null)
-  const [toast, setToast]         = useState(null)
-
-  const showToast = (msg, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3500)
-  }
-
-  const requestPayment = async (payment, property) => {
-    if (!payment.tenant_id) { showToast('Assign a tenant to this payment first.', 'error'); return }
-    setLoadingId(payment.id + '_request')
-    try {
-      const res = await fetch('/.netlify/functions/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          payment_id:    payment.id,
-          tenant_id:     payment.tenant_id,
-          amount:        Number(payment.amount),
-          description:   `Due ${payment.due_date}`,
-          property_name: property?.name || 'Property',
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error creating checkout')
-      navigator.clipboard?.writeText(data.url).catch(() => {})
-      showToast('Payment link created and copied to clipboard!')
-      fetchData()
-    } catch (err) {
-      showToast(err.message, 'error')
-    } finally {
-      setLoadingId(null)
-    }
-  }
-
-  const openBillingPortal = async (tenantId) => {
-    setLoadingId(tenantId + '_portal')
-    try {
-      const res = await fetch('/.netlify/functions/billing-portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenantId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error opening portal')
-      window.open(data.url, '_blank')
-    } catch (err) {
-      showToast(err.message, 'error')
-    } finally {
-      setLoadingId(null)
-    }
-  }
-
-  return { loadingId, toast, requestPayment, openBillingPortal }
+function statusTone(status) {
+  if (!status) return 'neutral'
+  const s = status.toLowerCase()
+  if (s === 'paid' || s === 'received') return 'success'
+  if (s === 'pending') return 'warn'
+  if (s === 'overdue' || s === 'late') return 'danger'
+  return 'neutral'
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Payments() {
   const { user } = useAuth()
-  const { can }  = usePlan()
-  const [payments, setPays]    = useState([])
-  const [properties, setProps] = useState([])
-  const [tenants, setTens]     = useState([])
-  const [loading, setLoading]  = useState(true)
-  const [modal, setModal]      = useState(null)
-  const [filter, setFilter]    = useState('all')
+  const navigate = useNavigate()
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const fetchData = async () => {
-    setLoading(true)
-    if (isDemoUser(user)) {
-      setPays([...demoPayments].reverse())
-      setProps(demoProperties.map(p => ({ id: p.id, name: p.name })))
-      setTens(demoTenants.filter(t => t.status === 'active'))
+  useEffect(() => {
+    if (!user) { navigate('/auth'); return }
+    async function load() {
+      if (isDemoUser(user)) {
+        setPayments(demoRows)
+      } else {
+        const { data } = await supabase.from('payments').select('*').eq('user_id', user.id).order('payment_date', { ascending: false }).limit(50)
+        setPayments(data || [])
+      }
       setLoading(false)
-      return
     }
-    const [{ data: pays }, { data: props }, { data: tens }] = await Promise.all([
-      supabase.from('rent_payments')
-        .select('*, properties(name,city,state), tenants(first_name,last_name)')
-        .eq('user_id', user.id)
-        .order('due_date', { ascending: false }),
-      supabase.from('properties').select('id,name').eq('user_id', user.id),
-      supabase.from('tenants').select('id,first_name,last_name,property_id').eq('user_id', user.id).eq('status', 'active'),
-    ])
-    setPays(pays ?? [])
-    setProps(props ?? [])
-    setTens(tens ?? [])
-    setLoading(false)
-  }
+    load()
+  }, [user, navigate])
 
-  useEffect(() => { if (user) fetchData() }, [user])
+  const months = [
+    { m: 'Jan', received: 4250, expected: 4450 },
+    { m: 'Feb', received: 4450, expected: 4450 },
+    { m: 'Mar', received: 4450, expected: 4450 },
+    { m: 'Apr', received: 4450, expected: 4450 },
+    { m: 'May', received: 2650, expected: 4450 },
+  ]
 
-  const { loadingId, toast, requestPayment, openBillingPortal } = useStripeActions(fetchData)
+  const demoRows = [
+    { d: 'May 3',  init: 'MW', color: '#4ECDC4', name: 'Marcus Williams', prop: 'Oak Street · Unit B', amt: '+$1,200', method: 'Check',         ref: '#0418',    status: 'success', label: 'Received' },
+    { d: 'May 1',  init: 'SC', color: '#FF6B6B', name: 'Sarah Chen',      prop: 'Oak Street · Unit A', amt: '+$1,450', method: 'Bank transfer',  ref: 'ACH-7821', status: 'success', label: 'Received' },
+    { d: 'May 1',  init: 'PP', color: '#FFD93D', name: 'Priya Patel',     prop: 'Riverside Condo',     amt: '$1,800',  method: '—',              ref: '—',        status: 'danger',  label: 'Overdue'  },
+    { d: 'Apr 14', init: '—',  color: '#FB923C', name: 'Acme Plumbing',   prop: 'Oak Street · Unit A', amt: '−$185',   method: 'Card',           ref: 'EXP-0214', status: 'neutral', label: 'Expense'  },
+    { d: 'Apr 4',  init: 'MW', color: '#4ECDC4', name: 'Marcus Williams', prop: 'Oak Street · Unit B', amt: '+$1,200', method: 'Check',          ref: '#0411',    status: 'warn',    label: 'Late · 4d'},
+    { d: 'Apr 1',  init: 'SC', color: '#FF6B6B', name: 'Sarah Chen',      prop: 'Oak Street · Unit A', amt: '+$1,450', method: 'Bank transfer',  ref: 'ACH-7641', status: 'success', label: 'Received' },
+    { d: 'Apr 1',  init: 'PP', color: '#FFD93D', name: 'Priya Patel',     prop: 'Riverside Condo',     amt: '+$1,800', method: 'Bank transfer',  ref: 'ACH-7639', status: 'success', label: 'Received' },
+  ]
 
-  const handleDelete = async (id) => {
-    if (isDemoUser(user)) { alert('Demo mode — changes are not saved.'); return }
-    if (!window.confirm('Delete this payment record?')) return
-    await supabase.from('rent_payments').delete().eq('id', id)
-    fetchData()
-  }
-
-  const filtered       = filter === 'all' ? payments : payments.filter(p => p.status === filter)
-  const totalCollected = payments.filter(p => p.status === 'paid').reduce((s, p) => s + Number(p.amount), 0)
-  const totalDue       = payments.filter(p => ['due','overdue'].includes(p.status)).reduce((s, p) => s + Number(p.amount), 0)
-  const propMap        = Object.fromEntries(properties.map(p => [p.id, p]))
+  const rows = isDemoUser(user) ? demoRows : payments.map(p => ({
+    d: p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+    init: (p.tenant_name || 'T').slice(0, 2).toUpperCase(),
+    color: '#60A5FA',
+    name: p.tenant_name || 'Unknown',
+    prop: p.property_name || '—',
+    amt: p.amount ? `+$${Number(p.amount).toLocaleString()}` : '—',
+    method: p.payment_method || '—',
+    ref: p.reference_number || '—',
+    status: statusTone(p.status),
+    label: p.status || 'Received',
+  }))
 
   return (
     <Layout>
-      <div className="page">
-        <div className="page-header">
+      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Payments</h1>
-            <p className="page-subtitle">Manual tracking + Stripe online payments</p>
+            <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500, marginBottom: 4 }}>Year to date · Jan 1 – May 3, 2026</div>
+            <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Payments</h1>
           </div>
-          <button className="btn btn-accent" onClick={() => setModal('new')}>+ Log Payment</button>
-        </div>
-
-        {/* Toast notification */}
-        {toast && (
-          <div style={{
-            position: 'fixed', top: 20, right: 20, zIndex: 9999,
-            background: toast.type === 'error' ? 'var(--late)' : '#059669',
-            color: '#fff', padding: '12px 20px', borderRadius: 10,
-            fontSize: 13.5, fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-            transition: 'opacity 0.2s',
-          }}>
-            {toast.msg}
-          </div>
-        )}
-
-        {/* Summary pills */}
-        <div style={styles.summaryRow}>
-          <div style={styles.summaryCard}>
-            <div style={styles.summaryVal}>{fmt(totalCollected)}</div>
-            <div style={styles.summaryLabel}>Total Collected</div>
-          </div>
-          <div style={styles.summaryCard}>
-            <div style={{ ...styles.summaryVal, color: 'var(--due)' }}>{fmt(totalDue)}</div>
-            <div style={styles.summaryLabel}>Outstanding</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 12px', background: VT.card, border: `1px solid ${VT.line}`,
+              borderRadius: 8, fontSize: 13, fontWeight: 500, color: VT.text2, cursor: 'pointer',
+            }}><VIcon.Download s={14} /> Export</button>
+            <button style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', background: VT.brand, border: 'none',
+              borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+            }}><VIcon.Plus s={14} c="#fff" /> Record payment</button>
           </div>
         </div>
 
-        {/* Filter */}
-        <div style={styles.filterRow}>
-          {['all','paid','due','overdue','partial'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ ...styles.filterBtn, ...(filter === f ? styles.filterActive : {}) }}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <div className="spinner" />
-        ) : filtered.length === 0 ? (
-          <div className="card">
-            <div className="empty-state">
-              <div className="empty-icon">💳</div>
-              <div className="empty-title">No payments logged</div>
-              <div className="empty-sub">Log manual payments or use Stripe to request payment online.</div>
-              <button className="btn btn-primary" onClick={() => setModal('new')}>Log a payment</button>
+        {/* Hero card */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          background: VT.card, borderRadius: 'var(--r-lg)', boxShadow: VT.shadowCard,
+          marginBottom: 16, overflow: 'hidden',
+        }}>
+          <div style={{ padding: 24, borderRight: `1px solid ${VT.line}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500 }}>Total received YTD</div>
+              <div style={{ fontFamily: VT.fontDisplay, fontSize: 40, fontWeight: 600, letterSpacing: '-0.03em', marginTop: 4, lineHeight: 1 }}>$20,250</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, fontSize: 13, fontWeight: 600, color: VT.green }}>
+                <VIcon.Up s={12} c="var(--green)" /> +$2,650 this month
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 22, marginTop: 24, paddingTop: 16, borderTop: `1px solid ${VT.line}` }}>
+              {[['Outstanding', '$1,800', VT.red], ['Expenses', '$725', VT.amber], ['Net', '$19,525', VT.green]].map(([l, v, c]) => (
+                <div key={l}>
+                  <div style={{ fontSize: 11, color: VT.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{l}</div>
+                  <div style={{ fontFamily: VT.fontDisplay, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: c, marginTop: 2 }}>{v}</div>
+                </div>
+              ))}
             </div>
           </div>
-        ) : (
-          <div className="card">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Property</th>
-                  <th>Tenant</th>
-                  <th>Due Date</th>
-                  <th>Paid Date</th>
-                  <th>Method</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <div className="td-primary">{p.properties?.name ?? '—'}</div>
-                      <div className="td-secondary">{p.properties?.city}</div>
-                    </td>
-                    <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                      {p.tenants ? `${p.tenants.first_name} ${p.tenants.last_name}` : '—'}
-                    </td>
-                    <td style={{ fontSize: 12.5 }}>
-                      {p.due_date ? new Date(p.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}
-                    </td>
-                    <td style={{ fontSize: 12.5 }}>
-                      {p.paid_date ? new Date(p.paid_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'capitalize' }}>
-                      {p.payment_method ? p.payment_method.replace(/_/g, ' ') : '—'}
-                    </td>
-                    <td className="td-mono">{fmt(p.amount)}</td>
-                    <td><StatusPill status={p.status} /></td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setModal(p)}>Edit</button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--late)' }}
-                          onClick={() => handleDelete(p.id)}>Del</button>
-
-                        {/* Stripe: request payment or copy existing link */}
-                        {p.status !== 'paid' && !isDemoUser(user) && (
-                          can('stripePayments') ? (
-                            p.payment_link ? (
-                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
-                                title="Copy payment link to clipboard"
-                                onClick={() => navigator.clipboard?.writeText(p.payment_link)}>
-                                📋 Copy Link
-                              </button>
-                            ) : (
-                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent)' }}
-                                disabled={loadingId === p.id + '_request'}
-                                title="Create Stripe payment link and copy to clipboard"
-                                onClick={() => requestPayment(p, propMap[p.property_id])}>
-                                {loadingId === p.id + '_request' ? '…' : '💳 Request'}
-                              </button>
-                            )
-                          ) : (
-                            <a href="/pricing" style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600, whiteSpace: 'nowrap' }}
-                              title="Upgrade to Pro to use Stripe payments">
-                              ✦ Pro feature
-                            </a>
-                          )
-                        )}
-
-                        {/* Stripe: autopay / billing portal */}
-                        {p.tenant_id && !isDemoUser(user) && can('stripePayments') && (
-                          <button className="btn btn-ghost btn-sm" style={{ color: '#6366f1' }}
-                            disabled={loadingId === p.tenant_id + '_portal'}
-                            title="Open Stripe portal — tenant can save card and set up autopay"
-                            onClick={() => openBillingPortal(p.tenant_id)}>
-                            {loadingId === p.tenant_id + '_portal' ? '…' : '↻ Autopay'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
+              <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500 }}>Monthly collection</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: VT.text2, fontWeight: 500 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: VT.brand }} /> Received
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: VT.tint }} /> Expected
+                </span>
+              </div>
+            </div>
+            <MonthlyBars months={months} />
           </div>
-        )}
-      </div>
+        </div>
 
-      {modal && (
-        <PaymentModal
-          payment={modal === 'new' ? null : modal}
-          properties={properties}
-          tenants={tenants}
-          onClose={() => setModal(null)}
-          onSave={() => { setModal(null); fetchData() }}
-        />
-      )}
+        {/* Table card */}
+        <div style={{ background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 20px', borderBottom: `1px solid ${VT.line}`, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 4, padding: 4, background: VT.tint, borderRadius: 10 }}>
+              {['All', 'Received', 'Outstanding', 'Expenses'].map((p, i) => (
+                <button key={p} style={{
+                  padding: '5px 12px', border: 'none', cursor: 'pointer',
+                  background: i === 0 ? VT.card : 'transparent',
+                  color: i === 0 ? VT.text1 : VT.text2,
+                  fontSize: 12, fontWeight: 600, borderRadius: 7,
+                  boxShadow: i === 0 ? VT.shadowCard : 'none',
+                }}>{p}</button>
+              ))}
+            </div>
+            <button style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 10px', background: 'transparent', border: `1px solid ${VT.line}`,
+              borderRadius: 8, fontSize: 12, fontWeight: 500, color: VT.text2, cursor: 'pointer',
+            }}><VIcon.Calendar s={13} /> May 2026</button>
+            <div style={{ marginLeft: 'auto', fontSize: 12, color: VT.text3, fontWeight: 500 }}>{rows.length} transactions</div>
+          </div>
+
+          {loading ? (
+            <div style={{ padding: 32, textAlign: 'center', color: VT.text3, fontWeight: 500 }}>Loading payments…</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
+                <thead>
+                  <tr style={{ background: VT.tint }}>
+                    {['Date', 'Counterparty', 'Property', 'Amount', 'Method', 'Reference', 'Status', ''].map((h, i) => (
+                      <th key={i} style={{
+                        textAlign: i === 3 ? 'right' : 'left', padding: '10px 16px',
+                        fontSize: 11, fontWeight: 600, color: VT.text3,
+                        textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, i) => {
+                    const amtColor = r.label === 'Overdue' ? VT.red : r.label === 'Expense' ? VT.text2 : VT.text1
+                    return (
+                      <tr key={i} style={{ borderTop: `1px solid ${VT.line}` }}>
+                        <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>{r.d}</td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <VAvatar initials={r.init} size={26} color={r.color} />
+                            <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{r.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>{r.prop}</td>
+                        <td style={{ padding: '14px 16px', fontFamily: VT.fontDisplay, fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em', color: amtColor, textAlign: 'right', whiteSpace: 'nowrap' }}>{r.amt}</td>
+                        <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500 }}>{r.method}</td>
+                        <td style={{ padding: '14px 16px', fontFamily: VT.fontMono, fontSize: 12, color: VT.text3, fontWeight: 500 }}>{r.ref}</td>
+                        <td style={{ padding: '14px 16px' }}><VPill tone={r.status}>{r.label}</VPill></td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right' }}><VIcon.Chevron s={14} c="var(--text-3)" /></td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </Layout>
   )
-}
-
-const styles = {
-  summaryRow: { display: 'flex', gap: 14, marginBottom: 20 },
-  summaryCard: {
-    background: 'var(--warm-white)', border: '1px solid var(--border)',
-    borderRadius: 12, padding: '14px 20px',
-  },
-  summaryVal: {
-    fontFamily: "'Cormorant Garamond', serif", fontSize: 26,
-    fontWeight: 600, color: 'var(--text)', lineHeight: 1,
-  },
-  summaryLabel: {
-    fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase',
-    letterSpacing: '0.07em', color: 'var(--muted)', marginTop: 4,
-  },
-  filterRow: {
-    display: 'flex', gap: 4, marginBottom: 18, background: 'var(--warm-white)',
-    border: '1px solid var(--border)', borderRadius: 10, padding: 3, width: 'fit-content',
-  },
-  filterBtn: {
-    padding: '7px 14px', border: 'none', borderRadius: 7,
-    background: 'transparent', color: 'var(--muted)', fontSize: 12.5,
-    fontWeight: 500, cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
-    transition: 'background 0.15s, color 0.15s',
-  },
-  filterActive: { background: 'var(--active-bg)', color: 'var(--active-fg)', fontWeight: 600 },
 }
