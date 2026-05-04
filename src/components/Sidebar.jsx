@@ -1,23 +1,35 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { usePlan, PLANS } from '../hooks/usePlan'
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  CreditCard,
+  FileText,
+  Wrench,
+  BarChart2,
+  Zap,
+  LogOut,
+  X,
+} from 'lucide-react'
 
 const NAV = [
   {
     label: 'Main',
     items: [
-      { to: '/dashboard',   icon: '📊', label: 'Dashboard'  },
-      { to: '/properties',  icon: '🏠', label: 'Properties' },
-      { to: '/tenants',     icon: '👤', label: 'Tenants'    },
-      { to: '/payments',    icon: '💳', label: 'Payments'   },
+      { to: '/dashboard',  Icon: LayoutDashboard, label: 'Dashboard'  },
+      { to: '/properties', Icon: Building2,        label: 'Properties' },
+      { to: '/tenants',    Icon: Users,            label: 'Tenants'    },
+      { to: '/payments',   Icon: CreditCard,       label: 'Payments'   },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { to: '/leases',   icon: '📄', label: 'Leases'   },
-      { to: '/expenses', icon: '🔧', label: 'Expenses' },
-      { to: '/reports',  icon: '📈', label: 'Reports'  },
+      { to: '/leases',   Icon: FileText,  label: 'Leases'   },
+      { to: '/expenses', Icon: Wrench,    label: 'Expenses' },
+      { to: '/reports',  Icon: BarChart2, label: 'Reports'  },
     ],
   },
 ]
@@ -28,7 +40,7 @@ const PLAN_COLORS = {
   portfolio: { bg: '#d1fae5', color: '#065f46' },
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const { user, signOut } = useAuth()
   const { plan, isAdmin, loading: planLoading } = usePlan()
   const navigate = useNavigate()
@@ -42,240 +54,111 @@ export default function Sidebar() {
   const planLabel  = isAdmin ? 'Admin' : (PLANS[plan]?.label ?? 'Free')
 
   return (
-    <aside style={styles.sidebar}>
-      {/* Logo */}
-      <div style={styles.logoWrap}>
-        <span style={styles.logo}>
-          Vestry<span style={styles.logoDot} />
-        </span>
-      </div>
+    <>
+      {/* Backdrop — only visible on mobile when drawer is open */}
+      {isOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Nav sections */}
-      {NAV.map(section => (
-        <div key={section.label} style={styles.section}>
-          <div style={styles.sectionLabel}>{section.label}</div>
-          {section.items.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              style={({ isActive }) => ({
-                ...styles.navItem,
-                ...(isActive ? styles.navItemActive : {}),
-              })}
-            >
-              <span style={styles.icon}>{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
-        </div>
-      ))}
-
-      {/* Admin link — only shown to admins */}
-      {!planLoading && isAdmin && (
-        <div style={{ padding: '0 14px 4px' }}>
-          <NavLink
-            to="/admin"
-            style={({ isActive }) => ({
-              ...styles.navItem,
-              ...(isActive ? styles.navItemActive : {}),
-              background: 'rgba(196,112,74,0.08)',
-              color: 'var(--accent)',
-            })}
+      <aside className={`sidebar${isOpen ? ' sidebar-open' : ''}`}>
+        {/* Logo row */}
+        <div className="sidebar-logo-wrap">
+          <span className="sidebar-logo">
+            Vestry<span className="sidebar-logo-dot" />
+          </span>
+          <button
+            className="sidebar-close-btn"
+            onClick={onClose}
+            aria-label="Close menu"
           >
-            <span style={styles.icon}>⚡</span>
-            Admin
-          </NavLink>
+            <X size={16} strokeWidth={2} />
+          </button>
         </div>
-      )}
 
-      {/* Upgrade / plan section */}
-      {!planLoading && (
-        <div style={{ padding: '12px 14px' }}>
-          {plan !== 'portfolio' && !isAdmin ? (
-            <NavLink
-              to="/pricing"
-              style={({ isActive }) => ({
-                ...styles.upgradeBtn,
-                ...(isActive ? { background: 'var(--accent)', color: '#fff', border: 'none' } : {}),
-              })}
-            >
-              ✦ Upgrade plan
-            </NavLink>
-          ) : (
-            <NavLink
-              to="/pricing"
-              style={({ isActive }) => ({
-                ...styles.navItem,
-                ...(isActive ? styles.navItemActive : {}),
-              })}
-            >
-              <span style={styles.icon}>⚙️</span>
-              Billing
-            </NavLink>
-          )}
-        </div>
-      )}
-
-      {/* User footer */}
-      <div style={styles.footer}>
-        <div style={styles.userRow}>
-          <div style={styles.avatar}>
-            {user?.email?.[0]?.toUpperCase() ?? 'U'}
+        {/* Nav sections */}
+        {NAV.map(section => (
+          <div key={section.label} className="sidebar-nav-section">
+            <div className="sidebar-section-label">{section.label}</div>
+            {section.items.map(({ to, Icon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `sidebar-nav-item${isActive ? ' active' : ''}`
+                }
+              >
+                <Icon size={16} strokeWidth={1.8} className="sidebar-nav-icon" />
+                {label}
+              </NavLink>
+            ))}
           </div>
-          <div style={styles.userInfo}>
-            <div style={styles.userEmail}>{user?.email}</div>
-            {!planLoading && (
-              <div style={{
-                fontSize: 10, fontWeight: 700, marginTop: 2,
-                background: planColors.bg, color: planColors.color,
-                padding: '1px 6px', borderRadius: 4,
-                display: 'inline-block', letterSpacing: '0.05em', textTransform: 'uppercase',
-              }}>
-                {planLabel}
-              </div>
+        ))}
+
+        {/* Admin link */}
+        {!planLoading && isAdmin && (
+          <div className="sidebar-nav-section" style={{ paddingTop: 4 }}>
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `sidebar-nav-item${isActive ? ' active' : ''}`
+              }
+              style={{ background: 'rgba(192,97,74,0.08)', color: 'var(--accent)' }}
+            >
+              <Zap size={16} strokeWidth={1.8} className="sidebar-nav-icon" />
+              Admin
+            </NavLink>
+          </div>
+        )}
+
+        {/* Upgrade / billing */}
+        {!planLoading && (
+          <div className="sidebar-upgrade-wrap">
+            {plan !== 'portfolio' && !isAdmin ? (
+              <NavLink to="/pricing" className="sidebar-upgrade-btn">
+                ✦ Upgrade plan
+              </NavLink>
+            ) : (
+              <NavLink
+                to="/pricing"
+                className={({ isActive }) =>
+                  `sidebar-nav-item${isActive ? ' active' : ''}`
+                }
+              >
+                <BarChart2 size={16} strokeWidth={1.8} className="sidebar-nav-icon" />
+                Billing
+              </NavLink>
             )}
           </div>
-        </div>
-        <button onClick={handleSignOut} style={styles.signOutBtn}>
-          Sign out
-        </button>
-      </div>
-    </aside>
-  )
-}
+        )}
 
-const styles = {
-  sidebar: {
-    width: 220,
-    minWidth: 220,
-    background: 'var(--sidebar)',
-    borderRight: '1px solid var(--border)',
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    position: 'sticky',
-    top: 0,
-    overflowY: 'auto',
-  },
-  logoWrap: {
-    padding: '22px 20px 18px',
-    borderBottom: '1px solid var(--border)',
-  },
-  logo: {
-    fontFamily: "'Cormorant Garamond', serif",
-    fontSize: 22,
-    fontWeight: 600,
-    color: 'var(--nav)',
-    letterSpacing: '0.02em',
-    display: 'flex',
-    alignItems: 'baseline',
-    gap: 3,
-  },
-  logoDot: {
-    width: 5,
-    height: 5,
-    borderRadius: '50%',
-    background: 'var(--accent)',
-    display: 'inline-block',
-    marginBottom: 3,
-    marginLeft: 1,
-    flexShrink: 0,
-  },
-  section: {
-    padding: '18px 12px 4px',
-  },
-  sectionLabel: {
-    fontSize: 9.5,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-    color: 'var(--muted)',
-    padding: '0 8px',
-    marginBottom: 6,
-  },
-  navItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 9,
-    padding: '9px 10px',
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 500,
-    color: 'var(--muted)',
-    textDecoration: 'none',
-    marginBottom: 2,
-    transition: 'background 0.15s, color 0.15s',
-  },
-  navItemActive: {
-    background: 'var(--active-bg)',
-    color: 'var(--active-fg)',
-    fontWeight: 600,
-  },
-  icon: {
-    fontSize: 15,
-    lineHeight: 1,
-    flexShrink: 0,
-  },
-  upgradeBtn: {
-    display: 'block',
-    textAlign: 'center',
-    padding: '9px 12px',
-    borderRadius: 8,
-    fontSize: 12.5,
-    fontWeight: 700,
-    color: 'var(--accent)',
-    textDecoration: 'none',
-    border: '1.5px dashed var(--accent)',
-    letterSpacing: '0.02em',
-    transition: 'background 0.15s, color 0.15s',
-  },
-  footer: {
-    marginTop: 'auto',
-    borderTop: '1px solid var(--border)',
-    padding: '14px 16px',
-  },
-  userRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    background: 'var(--nav)',
-    color: 'var(--cream)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: "'Outfit', sans-serif",
-    fontSize: 13,
-    fontWeight: 600,
-    flexShrink: 0,
-  },
-  userInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  userEmail: {
-    fontSize: 11.5,
-    color: 'var(--muted)',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
-  signOutBtn: {
-    width: '100%',
-    padding: '7px 12px',
-    borderRadius: 8,
-    background: 'transparent',
-    border: '1px solid var(--border)',
-    color: 'var(--muted)',
-    fontSize: 12,
-    fontWeight: 500,
-    cursor: 'pointer',
-    fontFamily: "'Outfit', sans-serif",
-    transition: 'background 0.15s, color 0.15s',
-  },
+        {/* User footer */}
+        <div className="sidebar-footer">
+          <div className="sidebar-user-row">
+            <div className="sidebar-avatar">
+              {user?.email?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-email">{user?.email}</div>
+              {!planLoading && (
+                <span
+                  className="sidebar-plan-badge"
+                  style={{ background: planColors.bg, color: planColors.color }}
+                >
+                  {planLabel}
+                </span>
+              )}
+            </div>
+          </div>
+          <button onClick={handleSignOut} className="sidebar-signout-btn">
+            <LogOut size={13} strokeWidth={1.8} />
+            Sign out
+          </button>
+        </div>
+      </aside>
+    </>
+  )
 }
