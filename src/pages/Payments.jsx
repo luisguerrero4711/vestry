@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import { isDemoUser } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar } from '../lib/vestry-shared'
+import RecordPaymentModal from '../components/RecordPaymentModal'
 
 // Monthly bar chart
 function MonthlyBars({ months }) {
@@ -53,6 +54,7 @@ export default function Payments() {
   const navigate = useNavigate()
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showPayModal, setShowPayModal] = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/auth'); return }
@@ -99,9 +101,19 @@ export default function Payments() {
     label: p.status || 'Received',
   }))
 
+  const handlePaymentAdded = (newRow) => {
+    setPayments(prev => [newRow, ...prev])
+  }
+
   return (
     <Layout>
-      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+      {showPayModal && (
+        <RecordPaymentModal
+          onClose={() => setShowPayModal(false)}
+          onAdded={handlePaymentAdded}
+        />
+      )}
+      <div className="v-page">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -114,20 +126,21 @@ export default function Payments() {
               padding: '8px 12px', background: VT.card, border: `1px solid ${VT.line}`,
               borderRadius: 8, fontSize: 13, fontWeight: 500, color: VT.text2, cursor: 'pointer',
             }}><VIcon.Download s={14} /> Export</button>
-            <button style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', background: VT.brand, border: 'none',
-              borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
-            }}><VIcon.Plus s={14} c="#fff" /> Record payment</button>
+            <button
+              onClick={() => setShowPayModal(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', background: VT.brand, border: 'none',
+                borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+              }}><VIcon.Plus s={14} c="#fff" /> Record payment</button>
           </div>
         </div>
 
         {/* Hero card */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr',
+        <div className="v-hero-row v-mb-16" style={{
           background: VT.card, borderRadius: 'var(--r-lg)', boxShadow: VT.shadowCard,
-          marginBottom: 16, overflow: 'hidden',
+          overflow: 'hidden',
         }}>
           <div style={{ padding: 24, borderRight: `1px solid ${VT.line}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>

@@ -150,6 +150,21 @@ export const VIcon = {
       <path d="M9 4v3M15 4v3M9 17v3M15 17v3M4 9h3M17 9h3M4 15h3M17 15h3"/>
     </svg>
   ),
+  X: ({ s = 16, c = 'currentColor' }) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round">
+      <path d="m6 6 12 12M6 18 18 6"/>
+    </svg>
+  ),
+  Lock: ({ s = 16, c = 'currentColor' }) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>
+    </svg>
+  ),
+  User: ({ s = 16, c = 'currentColor' }) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6"/>
+    </svg>
+  ),
 }
 
 export function VPill({ children, tone = 'neutral' }) {

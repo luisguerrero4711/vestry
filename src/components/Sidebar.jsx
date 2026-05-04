@@ -12,6 +12,7 @@ import {
   Zap,
   LogOut,
   X,
+  Settings,
 } from 'lucide-react'
 
 const NAV = [
@@ -30,6 +31,12 @@ const NAV = [
       { to: '/leases',   Icon: FileText,  label: 'Leases'   },
       { to: '/expenses', Icon: Wrench,    label: 'Expenses' },
       { to: '/reports',  Icon: BarChart2, label: 'Reports'  },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { to: '/settings', Icon: Settings, label: 'Settings' },
     ],
   },
 ]

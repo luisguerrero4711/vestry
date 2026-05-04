@@ -150,7 +150,7 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+      <div className="v-page">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -173,7 +173,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
+        <div className="v-grid-4 v-mb-18">
           <StatCard label="Collected"   value="$2,650" delta="12.4%"   deltaPositive sparkline={[1800,1900,1850,2100,2400,2350,2650]} accent="var(--brand)" />
           <StatCard label="Outstanding" value="$1,800" delta="1 late"  deltaPositive={false} sparkline={[400,200,800,1200,900,1500,1800]} accent="var(--red)" />
           <StatCard label="Expenses"    value="$725"   delta="3 logged" deltaPositive sparkline={[200,180,300,250,400,500,725]} accent="var(--amber)" />
@@ -181,7 +181,7 @@ export default function Dashboard() {
         </div>
 
         {/* Charts row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14, marginBottom: 18 }}>
+        <div className="v-chart-row v-mb-18">
           <div style={{ background: VT.card, borderRadius: 'var(--r-md)', padding: 22, boxShadow: VT.shadowCard }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div>

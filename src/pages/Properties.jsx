@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import { isDemoUser, demoProperties } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar, PropertyThumb } from '../lib/vestry-shared'
+import AddPropertyModal from '../components/AddPropertyModal'
 
 // Map demo property type to thumb kind
 function kindFromType(type = '') {
@@ -19,6 +20,7 @@ export default function Properties() {
   const navigate = useNavigate()
   const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/auth'); return }
@@ -59,9 +61,19 @@ export default function Properties() {
   const totalOccupied = displayProps.reduce((s, p) => s + p.occupied, 0)
   const occupancyPct = totalUnits > 0 ? Math.round((totalOccupied / totalUnits) * 100) : 0
 
+  const handlePropertyAdded = (newProp) => {
+    setProperties(prev => [newProp, ...prev])
+  }
+
   return (
     <Layout>
-      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+      {showAddModal && (
+        <AddPropertyModal
+          onClose={() => setShowAddModal(false)}
+          onAdded={handlePropertyAdded}
+        />
+      )}
+      <div className="v-page">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -71,11 +83,14 @@ export default function Properties() {
             <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Properties</h1>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 12px', background: VT.card, border: `1px solid ${VT.line}`,
-              borderRadius: 8, fontSize: 13, fontWeight: 500, color: VT.text2, cursor: 'pointer',
-            }}><VIcon.Filter s={14} /> Filter</button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', background: VT.brand, border: 'none',
+                borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+              }}><VIcon.Plus s={14} c="#fff" /> Add property</button>
             <div style={{ display: 'flex', gap: 4, padding: 4, background: VT.tint, borderRadius: 10 }}>
               {['Grid', 'List'].map((p, i) => (
                 <button key={p} style={{
@@ -91,10 +106,9 @@ export default function Properties() {
         </div>
 
         {/* Summary strip */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        <div className="v-grid-4 v-mb-20" style={{
           background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard,
-          padding: '16px 4px', marginBottom: 20,
+          padding: '16px 4px',
         }}>
           {[
             ['Total monthly rent', totalMonthly > 0 ? `$${totalMonthly.toLocaleString()}` : '—', VT.brand],

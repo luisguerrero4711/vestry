@@ -11,6 +11,7 @@ import Expenses    from './pages/Expenses'
 import Reports     from './pages/Reports'
 import Pricing     from './pages/Pricing'
 import Admin       from './pages/Admin'
+import Settings    from './pages/Settings'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/reports"    element={<PrivateRoute><Reports    /></PrivateRoute>} />
           <Route path="/pricing"    element={<PrivateRoute><Pricing    /></PrivateRoute>} />
           <Route path="/admin"      element={<PrivateRoute><Admin      /></PrivateRoute>} />
+          <Route path="/settings"   element={<PrivateRoute><Settings   /></PrivateRoute>} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

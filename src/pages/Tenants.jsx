@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import { isDemoUser, demoTenants } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
+import AddTenantModal from '../components/AddTenantModal'
 
 const AVATAR_COLORS = ['#FF6B6B','#4ECDC4','#FFD93D','#A78BFA','#60A5FA','#34D399','#F472B6','#FB923C']
 
@@ -23,6 +24,7 @@ export default function Tenants() {
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
 
   useEffect(() => {
     if (!user) { navigate('/auth'); return }
@@ -49,9 +51,19 @@ export default function Tenants() {
     return name.toLowerCase().includes(search.toLowerCase()) || (t.email || '').toLowerCase().includes(search.toLowerCase())
   })
 
+  const handleTenantAdded = (newTenant) => {
+    setTenants(prev => [...prev, newTenant])
+  }
+
   return (
     <Layout>
-      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+      {showAddModal && (
+        <AddTenantModal
+          onClose={() => setShowAddModal(false)}
+          onAdded={handleTenantAdded}
+        />
+      )}
+      <div className="v-page">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -75,12 +87,14 @@ export default function Tenants() {
                 }}
               />
             </div>
-            <button style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', background: VT.brand, border: 'none',
-              borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
-            }}><VIcon.Plus s={14} c="#fff" /> Add tenant</button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', background: VT.brand, border: 'none',
+                borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+              }}><VIcon.Plus s={14} c="#fff" /> Add tenant</button>
           </div>
         </div>
 
@@ -90,7 +104,8 @@ export default function Tenants() {
           <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>No tenants found</div>
         ) : (
           <div style={{ background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead>
                 <tr style={{ background: VT.tint }}>
                   {['Tenant', 'Contact', 'Property', 'Monthly rent', 'On-time', 'Status', ''].map((h, i) => (
@@ -156,6 +171,7 @@ export default function Tenants() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

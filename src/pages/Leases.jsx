@@ -105,7 +105,7 @@ export default function Leases() {
 
   return (
     <Layout>
-      <div style={{ padding: '28px 28px 32px', overflow: 'auto', height: '100%', background: VT.page }}>
+      <div className="v-page">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -123,7 +123,7 @@ export default function Leases() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>Loading leases…</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: lease ? '1fr 360px' : '1fr', gap: 16 }}>
+          <div className={lease ? 'v-detail-row' : ''} style={{ display: 'grid', gap: 16 }}>
             {/* Lease list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {leases.map(l => {
