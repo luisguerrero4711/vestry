@@ -91,7 +91,11 @@ export default function Leases() {
         setLeases(demoLeases)
         setSelected(demoLeases[0])
       } else {
-        const { data } = await supabase.from('leases').select('*').eq('user_id', user.id).order('start_date', { ascending: false })
+        const { data } = await supabase
+          .from('leases')
+          .select('*, tenants(first_name, last_name), properties(name)')
+          .eq('user_id', user.id)
+          .order('start_date', { ascending: false })
         const ls = data || []
         setLeases(ls)
         if (ls.length > 0) setSelected(ls[0])
@@ -145,10 +149,10 @@ export default function Leases() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <VAvatar initials={initials(l.tenant || l.tenant_name || 'T')} size={40} color={avatarColor(l.tenant || l.tenant_name || 'T')} />
+                        <VAvatar initials={initials(l.tenants ? `${l.tenants.first_name} ${l.tenants.last_name}` : (l.tenant || 'T'))} size={40} color={avatarColor(l.tenants ? `${l.tenants.first_name} ${l.tenants.last_name}` : (l.tenant || 'T'))} />
                         <div>
-                          <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{l.tenant || l.tenant_name || 'Tenant'}</div>
-                          <div style={{ fontSize: 12, color: VT.text2, fontWeight: 500, marginTop: 2 }}>{l.property || l.property_name || '—'}</div>
+                          <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{l.tenants ? `${l.tenants.first_name} ${l.tenants.last_name}`.trim() : (l.tenant || 'Tenant')}</div>
+                          <div style={{ fontSize: 12, color: VT.text2, fontWeight: 500, marginTop: 2 }}>{l.properties?.name || l.property || '—'}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
@@ -201,7 +205,7 @@ export default function Leases() {
                     12-month residential lease
                   </div>
                   <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500 }}>
-                    {lease.tenant || lease.tenant_name} · {lease.addr || lease.property || '—'}
+                    {lease.tenants ? `${lease.tenants.first_name} ${lease.tenants.last_name}`.trim() : (lease.tenant || 'Tenant')} · {lease.properties?.name || lease.addr || lease.property || '—'}
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
                     <button style={{
@@ -234,9 +238,9 @@ export default function Leases() {
                     <div>
                       <div style={{ fontSize: 11, color: VT.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Tenant</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <VAvatar initials={initials(lease.tenant || lease.tenant_name || 'T')} size={34} color={avatarColor(lease.tenant || lease.tenant_name || 'T')} />
+                        <VAvatar initials={initials(lease.tenants ? `${lease.tenants.first_name} ${lease.tenants.last_name}` : (lease.tenant || 'T'))} size={34} color={avatarColor(lease.tenants ? `${lease.tenants.first_name} ${lease.tenants.last_name}` : (lease.tenant || 'T'))} />
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{lease.tenant || lease.tenant_name || 'Tenant'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{lease.tenants ? `${lease.tenants.first_name} ${lease.tenants.last_name}`.trim() : (lease.tenant || 'Tenant')}</div>
                           <div style={{ fontSize: 11, color: VT.text3, fontWeight: 500 }}>Primary occupant</div>
                         </div>
                       </div>

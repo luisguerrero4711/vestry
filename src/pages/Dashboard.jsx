@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
+import { isDemoUser } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
 
 // ── Sparkline stat card ──────────────────────────────────────────────────────
@@ -72,14 +73,14 @@ function CollectionDonut({ pct = 60, size = 140 }) {
 }
 
 // ── Net income bezier chart ───────────────────────────────────────────────────
-function NetIncomeChart() {
-  const data = [1620, 1780, 1850, 1720, 1900, 1925]
-  const months = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May']
+function NetIncomeChart({ data: rawData, months: rawMonths }) {
+  const data = rawData || [1620, 1780, 1850, 1720, 1900, 1925]
+  const months = rawMonths || ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May']
   const w = 540, h = 140
   const padX = 8, padY = 16
   const max = Math.max(...data) * 1.1
   const min = Math.min(...data) * 0.85
-  const range = max - min
+  const range = max - min || 1
   const stepX = (w - padX * 2) / (data.length - 1)
   const points = data.map((v, i) => ({
     x: padX + i * stepX,
@@ -93,6 +94,8 @@ function NetIncomeChart() {
     d += ` C${cx},${p0.y} ${cx},${p1.y} ${p1.x},${p1.y}`
   }
   const area = `${d} L${points[points.length - 1].x},${h - padY} L${padX},${h - padY} Z`
+  const lastVal = data[data.length - 1]
+  const lastMonth = months[months.length - 1]
 
   return (
     <div style={{ position: 'relative' }}>
@@ -127,26 +130,154 @@ function NetIncomeChart() {
         padding: '5px 9px', borderRadius: 8,
         fontFamily: VT.fontText, fontSize: 12, fontWeight: 500,
         boxShadow: VT.shadowMd, letterSpacing: '-0.01em',
-      }}>$1,925 net <span style={{ color: 'rgba(255,255,255,0.6)' }}>· May</span></div>
+      }}>${lastVal.toLocaleString()} net <span style={{ color: 'rgba(255,255,255,0.6)' }}>· {lastMonth}</span></div>
     </div>
   )
 }
+
+const AVATAR_COLORS = ['#FF6B6B','#4ECDC4','#FFD93D','#A78BFA','#60A5FA','#34D399','#F472B6','#FB923C']
+function avatarColor(name = '') {
+  return AVATAR_COLORS[(name.charCodeAt(0) || 0) % AVATAR_COLORS.length]
+}
+function initials(name = '') {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+}
+function fmt(n) { return `$${Math.round(n).toLocaleString()}` }
 
 // ── Dashboard page ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [stats, setStats] = useState({ collected: '$2,650', outstanding: '$1,800', expenses: '$725', net: '$1,925' })
+  const [loading, setLoading] = useState(true)
+  const [dashData, setDashData] = useState(null)
 
   useEffect(() => {
-    if (!user) navigate('/auth')
+    if (!user) { navigate('/auth'); return }
+
+    if (isDemoUser(user)) {
+      setDashData({
+        collected: 2650, outstanding: 1800, expenses: 725, net: 1925,
+        collectionPct: 60, paidCount: 2, totalCount: 3,
+        overdue: [{ name: "Priya Patel", prop: "Riverside Condo", amount: 1800, days: 2 }],
+        recent: [
+          { init: 'SC', color: '#FF6B6B', name: 'Sarah Chen',      prop: 'Oak Street Duplex · Unit A', amount: 1450, status: 'paid',    label: 'Paid May 1',    method: 'Bank transfer' },
+          { init: 'MW', color: '#4ECDC4', name: 'Marcus Williams', prop: 'Oak Street Duplex · Unit B', amount: 1200, status: 'paid',    label: 'Paid May 3',    method: 'Check' },
+          { init: 'PP', color: '#FFD93D', name: 'Priya Patel',     prop: 'Riverside Condo',            amount: 1800, status: 'overdue', label: 'Overdue · 2d', method: 'Awaiting' },
+        ],
+        netChartData: [1620, 1780, 1850, 1720, 1900, 1925],
+        netChartMonths: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
+        netTotal: 11795,
+      })
+      setLoading(false)
+      return
+    }
+
+    // Real data fetch
+    async function load() {
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+
+      const [
+        { data: paidData },
+        { data: overdueData },
+        { data: expenseData },
+        { data: recentData },
+        { data: tenantCount },
+      ] = await Promise.all([
+        // Paid this month
+        supabase.from('rent_payments')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('status', 'paid')
+          .gte('paid_date', monthStart)
+          .lte('paid_date', monthEnd),
+        // Overdue
+        supabase.from('rent_payments')
+          .select('amount, due_date, tenants(first_name, last_name), properties(name)')
+          .eq('user_id', user.id)
+          .eq('status', 'overdue'),
+        // Expenses this month
+        supabase.from('expenses')
+          .select('amount')
+          .eq('user_id', user.id)
+          .gte('date', monthStart)
+          .lte('date', monthEnd),
+        // Recent payments
+        supabase.from('rent_payments')
+          .select('*, tenants(first_name, last_name), properties(name)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        // Active tenant count (for collection rate)
+        supabase.from('tenants')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id)
+          .eq('status', 'active'),
+      ])
+
+      const collected = (paidData || []).reduce((s, p) => s + Number(p.amount || 0), 0)
+      const outstanding = (overdueData || []).reduce((s, p) => s + Number(p.amount || 0), 0)
+      const expenses = (expenseData || []).reduce((s, p) => s + Number(p.amount || 0), 0)
+      const net = collected - expenses
+      const paidCount = (paidData || []).length
+      const total = tenantCount?.length || paidCount || 1
+      const collectionPct = total > 0 ? Math.round((paidCount / total) * 100) : 0
+
+      const overdue = (overdueData || []).map(p => {
+        const name = p.tenants ? `${p.tenants.first_name} ${p.tenants.last_name}`.trim() : 'Tenant'
+        const dueDate = p.due_date ? new Date(p.due_date + 'T00:00:00') : null
+        const days = dueDate ? Math.max(0, Math.round((Date.now() - dueDate.getTime()) / 86400000)) : 0
+        return { name, prop: p.properties?.name || '—', amount: Number(p.amount || 0), days }
+      })
+
+      const recent = (recentData || []).map(p => {
+        const name = p.tenants ? `${p.tenants.first_name} ${p.tenants.last_name}`.trim() : '—'
+        const dateLabel = (p.paid_date || p.due_date)
+          ? new Date((p.paid_date || p.due_date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : '—'
+        const label = p.status === 'paid' ? `Paid ${dateLabel}` : p.status === 'overdue' ? 'Overdue' : p.status === 'due' ? `Due ${dateLabel}` : p.status
+        return {
+          init: name !== '—' ? name.slice(0, 2).toUpperCase() : '?',
+          color: avatarColor(name),
+          name,
+          prop: p.properties?.name || '—',
+          amount: Number(p.amount || 0),
+          status: p.status === 'paid' ? 'success' : p.status === 'overdue' ? 'danger' : 'warn',
+          label,
+          method: { bank_transfer: 'Bank transfer', check: 'Check', cash: 'Cash', venmo: 'Venmo', zelle: 'Zelle' }[p.payment_method] || p.payment_method || '—',
+        }
+      })
+
+      setDashData({
+        collected, outstanding, expenses, net,
+        collectionPct, paidCount, totalCount: total,
+        overdue, recent,
+        netChartData: [net, net, net, net, net, net], // placeholder until multi-month data
+        netChartMonths: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
+        netTotal: net,
+      })
+      setLoading(false)
+    }
+    load()
   }, [user, navigate])
 
-  const firstName = user?.email?.split('@')[0]?.split('.')[0] || 'Luis'
+  const firstName = user?.email?.split('@')[0]?.split('.')[0] || 'there'
   const displayName = firstName.charAt(0).toUpperCase() + firstName.slice(1)
-
   const today = new Date()
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+
+  if (loading || !dashData) {
+    return (
+      <Layout>
+        <div className="v-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+          <div style={{ color: VT.text3, fontWeight: 500, fontSize: 14 }}>Loading dashboard…</div>
+        </div>
+      </Layout>
+    )
+  }
+
+  const { collected, outstanding, expenses, net, collectionPct, paidCount, totalCount, overdue, recent, netChartData, netChartMonths, netTotal } = dashData
 
   return (
     <Layout>
@@ -174,10 +305,10 @@ export default function Dashboard() {
 
         {/* Stat cards */}
         <div className="v-grid-4 v-mb-18">
-          <StatCard label="Collected"   value="$2,650" delta="12.4%"   deltaPositive sparkline={[1800,1900,1850,2100,2400,2350,2650]} accent="var(--brand)" />
-          <StatCard label="Outstanding" value="$1,800" delta="1 late"  deltaPositive={false} sparkline={[400,200,800,1200,900,1500,1800]} accent="var(--red)" />
-          <StatCard label="Expenses"    value="$725"   delta="3 logged" deltaPositive sparkline={[200,180,300,250,400,500,725]} accent="var(--amber)" />
-          <StatCard label="Net Income"  value="$1,925" delta="3.8%"    deltaPositive sparkline={[1620,1780,1850,1720,1900,1925]} accent="var(--green)" />
+          <StatCard label="Collected"   value={fmt(collected)}   delta="this month"  deltaPositive sparkline={[0, collected * 0.3, collected * 0.5, collected * 0.7, collected * 0.9, collected]} accent="var(--brand)" />
+          <StatCard label="Outstanding" value={fmt(outstanding)} delta={overdue.length > 0 ? `${overdue.length} overdue` : 'All clear'} deltaPositive={outstanding === 0} sparkline={[0, outstanding]} accent="var(--red)" />
+          <StatCard label="Expenses"    value={fmt(expenses)}    delta="this month"  deltaPositive={false} sparkline={[0, expenses * 0.4, expenses * 0.7, expenses]} accent="var(--amber)" />
+          <StatCard label="Net Income"  value={fmt(net)}         delta="this month"  deltaPositive={net >= 0} sparkline={[0, net * 0.3, net * 0.6, net * 0.8, net]} accent="var(--green)" />
         </div>
 
         {/* Charts row */}
@@ -187,24 +318,24 @@ export default function Dashboard() {
               <div>
                 <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500 }}>Net income</div>
                 <div style={{ fontFamily: VT.fontDisplay, fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginTop: 2 }}>
-                  $11,795 <span style={{ color: VT.text3, fontSize: 14, fontWeight: 500 }}>· last 6 months</span>
+                  {fmt(netTotal)} <span style={{ color: VT.text3, fontSize: 14, fontWeight: 500 }}>· this month</span>
                 </div>
               </div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: VT.greenTint, color: VT.green, fontSize: 12, fontWeight: 600 }}>
-                <VIcon.Up s={11} c="var(--green)" /> Healthy
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: net >= 0 ? VT.greenTint : VT.redTint, color: net >= 0 ? VT.green : VT.red, fontSize: 12, fontWeight: 600 }}>
+                <VIcon.Up s={11} c={net >= 0 ? 'var(--green)' : 'var(--red)'} /> {net >= 0 ? 'Healthy' : 'Deficit'}
               </div>
             </div>
-            <NetIncomeChart />
+            <NetIncomeChart data={netChartData} months={netChartMonths} />
           </div>
 
           <div style={{ background: VT.card, borderRadius: 'var(--r-md)', padding: 22, boxShadow: VT.shadowCard, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500, marginBottom: 4 }}>Collection rate · May</div>
-            <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 500, color: VT.text1, letterSpacing: '-0.01em' }}>2 of 3 paid</div>
+            <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500, marginBottom: 4 }}>Collection rate · this month</div>
+            <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 500, color: VT.text1, letterSpacing: '-0.01em' }}>{paidCount} of {totalCount} paid</div>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, padding: '12px 0' }}>
-              <CollectionDonut pct={60} size={130} />
+              <CollectionDonut pct={collectionPct} size={130} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 10, borderTop: `1px solid ${VT.line}` }}>
-              {[['Paid', '$2,650', VT.green], ['Outstanding', '$1,800', VT.red]].map(([l, v, c]) => (
+              {[[`Paid (${paidCount})`, fmt(collected), VT.green], [`Outstanding`, fmt(outstanding), VT.red]].map(([l, v, c]) => (
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 500, color: VT.text2 }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: c }} /> {l}
@@ -216,57 +347,54 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Overdue alert */}
-        <div style={{
-          background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard,
-          padding: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12, background: VT.redTint,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        {/* Overdue alerts */}
+        {overdue.length > 0 && overdue.map((od, i) => (
+          <div key={i} style={{
+            background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard,
+            padding: 18, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" />
-            </svg>
-          </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>Priya Patel's rent is overdue</span>
-              <VPill tone="danger">2 days late</VPill>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, background: VT.redTint,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" />
+              </svg>
             </div>
-            <div style={{ fontSize: 13, color: VT.text2, marginTop: 3, fontWeight: 500 }}>$1,800 · Riverside Condo · Due May 1</div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{od.name}'s rent is overdue</span>
+                <VPill tone="danger">{od.days > 0 ? `${od.days}d late` : 'Overdue'}</VPill>
+              </div>
+              <div style={{ fontSize: 13, color: VT.text2, marginTop: 3, fontWeight: 500 }}>{fmt(od.amount)} · {od.prop}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button style={{
+                padding: '8px 14px', background: 'transparent', border: `1px solid ${VT.line}`,
+                borderRadius: 8, fontSize: 13, fontWeight: 600, color: VT.text1, cursor: 'pointer',
+              }}>Send reminder</button>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{
-              padding: '8px 14px', background: 'transparent', border: `1px solid ${VT.line}`,
-              borderRadius: 8, fontSize: 13, fontWeight: 600, color: VT.text1, cursor: 'pointer',
-            }}>Send reminder</button>
-            <button style={{
-              padding: '8px 14px', background: VT.brand, border: 'none',
-              borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
-            }}>Mark paid</button>
-          </div>
-        </div>
+        ))}
 
         {/* Recent rent table */}
         <VSection
-          title="Recent rent"
-          subtitle="May 2026 · 3 tenants"
+          title="Recent payments"
+          subtitle={`${recent.length} most recent`}
           padding={0}
           action={
-            <button style={{
+            <button onClick={() => navigate('/payments')} style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
               background: 'transparent', border: 'none', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, color: VT.brand,
             }}>View all <VIcon.Chevron s={14} c="var(--brand)" /></button>
           }
         >
-          {[
-            { init: 'SC', color: '#FF6B6B', name: 'Sarah Chen',      prop: 'Oak Street Duplex · Unit A', amount: '$1,450', status: 'success', label: 'Paid May 1',    method: 'Bank transfer' },
-            { init: 'MW', color: '#4ECDC4', name: 'Marcus Williams', prop: 'Oak Street Duplex · Unit B', amount: '$1,200', status: 'success', label: 'Paid May 3',    method: 'Check' },
-            { init: 'PP', color: '#FFD93D', name: 'Priya Patel',     prop: 'Riverside Condo',            amount: '$1,800', status: 'danger',  label: 'Overdue · 2d', method: 'Awaiting' },
-          ].map((r, i, arr) => (
+          {recent.length === 0 ? (
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: VT.text3, fontWeight: 500, fontSize: 13 }}>
+              No payments recorded yet. <button onClick={() => navigate('/payments')} style={{ background: 'none', border: 'none', color: VT.brand, fontWeight: 600, cursor: 'pointer' }}>Record one →</button>
+            </div>
+          ) : recent.map((r, i, arr) => (
             <div key={i} style={{
               display: 'grid', gridTemplateColumns: '1fr 1fr 120px 120px 20px',
               gap: 12, alignItems: 'center', padding: '14px 20px',
@@ -280,7 +408,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.prop}</div>
-              <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{r.amount}</div>
+              <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{fmt(r.amount)}</div>
               <VPill tone={r.status}>{r.label}</VPill>
               <VIcon.Chevron s={16} c="var(--text-3)" />
             </div>

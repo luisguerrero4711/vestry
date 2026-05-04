@@ -32,7 +32,11 @@ export default function Tenants() {
       if (isDemoUser(user)) {
         setTenants(demoTenants || demoFallback)
       } else {
-        const { data } = await supabase.from('tenants').select('*').eq('user_id', user.id).order('name')
+        const { data } = await supabase
+          .from('tenants')
+          .select('*, properties(name)')
+          .eq('user_id', user.id)
+          .order('first_name')
         setTenants(data || [])
       }
       setLoading(false)
@@ -122,11 +126,12 @@ export default function Tenants() {
                   const name = t.name || `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'Unknown'
                   const email = t.email || '—'
                   const phone = t.phone || t.phone_number || '—'
-                  const property = t.property || t.property_name || '—'
+                  const property = t.property || t.properties?.name || t.property_name || '—'
                   const rent = t.rent || t.monthly_rent || 0
                   const onTime = t.onTime || t.on_time_rate || '—'
                   const status = t.status || 'active'
-                  const tone = status === 'active' ? 'success' : status === 'late' ? 'danger' : 'warn'
+                  const tone = status === 'active' ? 'success' : status === 'past' ? 'neutral' : status === 'late' ? 'danger' : 'warn'
+                  const statusLabel = status === 'active' ? 'Active' : status === 'past' ? 'Past' : status === 'prospect' ? 'Prospect' : status === 'late' ? 'Late' : 'Inactive'
 
                   return (
                     <tr key={t.id || i} style={{ borderTop: `1px solid ${VT.line}`, cursor: 'pointer' }}>
@@ -161,7 +166,7 @@ export default function Tenants() {
                         </div>
                       </td>
                       <td style={{ padding: '16px 20px' }}>
-                        <VPill tone={tone}>{status === 'active' ? 'Active' : status === 'late' ? 'Late' : 'Inactive'}</VPill>
+                        <VPill tone={tone}>{statusLabel}</VPill>
                       </td>
                       <td style={{ padding: '16px 16px', textAlign: 'right' }}>
                         <VIcon.Chevron s={14} c="var(--text-3)" />

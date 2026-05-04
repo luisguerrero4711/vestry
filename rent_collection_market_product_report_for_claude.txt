@@ -1,0 +1,595 @@
+# Rent Collection App — Market, Audience, Product Strategy, and Claude Pivot Brief
+
+Prepared: May 2, 2026
+
+## Executive Summary
+
+The rent collection app should not compete as “another TurboTenant.” The market already has strong free or low-cost landlord-first rent collection tools. The more defensible wedge is a small, focused product for agents, new investors, and small landlords who need a simple, professional, relationship-driven rent collection experience.
+
+The first audience should be small and specific:
+1. Real estate agents who work with landlord/investor clients.
+2. New investors with 1–3 units.
+3. Small landlords still using Zelle, Venmo, checks, spreadsheets, or informal tracking.
+4. Mentor/student communities where users are learning real estate investing and need credibility.
+
+The MVP should remain payment-safe and simple:
+- Use Stripe as the hidden MVP payment processor.
+- Use bank-link language, not Stripe language.
+- Do not store sensitive banking data.
+- Make the design feel modern, trustworthy, clean, and mobile-first.
+- Build the code with a payment-provider abstraction so Plaid Transfer or another ACH provider can be added later.
+
+The strongest long-term business model is not charging for basic rent collection. It is:
+- Free core rent collection as the hook.
+- Agent Pro tools.
+- Concierge setup.
+- Landlord Plus features.
+- Tax/accounting reports.
+- Tenant screening/application monetization.
+- Referral and vendor network revenue.
+
+## Market Reality
+
+Free rent collection is now table stakes. Competitors already offer free or nearly free rent collection:
+- TurboTenant advertises core features including rent collection and tenant communication as free for landlords.
+- Apartments.com Rental Manager advertises online rent collection for free, with ACH payments free and card payments carrying fees.
+- Avail offers a $0/unit plan with rent collection included and paid upgrades.
+- Zillow Rental Manager and other platforms also condition the market toward free or low-cost rent collection.
+
+Implication:
+Basic ACH rent collection cannot be the primary paid feature. The product must either:
+1. Stay free for basic rent collection, or
+2. Charge only where there is a clear value layer beyond payment processing.
+
+## Recommended Wedge
+
+Do not position as:
+“Free rent collection software.”
+
+That puts the product directly against TurboTenant, Apartments.com, Avail, Zillow, RentRedi, and others.
+
+Position as:
+“A simple rent collection and landlord relationship tool for agents, new investors, and small landlords.”
+
+A stronger phrase:
+“Help landlord clients collect rent professionally and stay organized after the lease is signed.”
+
+Why this wedge works:
+Most landlord-first platforms solve landlord operations. This product can solve agent relationship retention:
+- Agents lose touch after the lease closes.
+- Landlords need simple tools.
+- New investors want to look more professional.
+- Agents want repeat business from landlord clients.
+- Rent collection creates a monthly relationship touchpoint.
+
+## Target Audience
+
+### Primary ICP: Rental-focused agents serving small landlords
+
+Who they are:
+- Licensed agents who work with rentals or investor clients.
+- Newer agents who want a value-add.
+- Agents connected to landlord clients but not providing property management.
+- Agents who want to stay in the landlord’s orbit after the lease is signed.
+
+Core pain:
+“I helped lease the unit, but after that I disappear. I need a reason to stay valuable to landlord clients.”
+
+What they want:
+- Something useful to offer landlords.
+- A clean portal they can recommend.
+- A professional-looking experience.
+- Low-friction setup.
+- A reason to follow up with landlords.
+
+What to build for them:
+- Agent referral/invite link.
+- Agent-branded landlord onboarding later.
+- Basic client/property CRM.
+- Renewal reminders.
+- Lease anniversary reminders.
+- “Landlord client dashboard.”
+- Future opportunity tracking.
+
+### Secondary ICP: New investors with 1–3 units
+
+Who they are:
+- New landlords, house hackers, BRRR investors, small portfolio owners.
+- People transitioning from Zelle/checks/spreadsheets.
+- Mentor/student community members.
+- Landlords who want to look legitimate but are overwhelmed by full property management software.
+
+Core pain:
+“I need a simple, professional way to collect rent and track payments without overcomplicating everything.”
+
+What they want:
+- Bank-linked payment.
+- Payment status.
+- Tenant-friendly portal.
+- Receipts.
+- Simple ledger.
+- Not too many features.
+- Confidence that they are not storing banking data.
+
+What to build for them:
+- 1 property setup in under 5 minutes.
+- Invite tenant by email/text.
+- Tenant links bank.
+- Tenant pays rent.
+- Landlord sees status.
+- Clean payment history.
+
+### Tertiary ICP: Small landlords using informal payment methods
+
+Who they are:
+- Landlords using Zelle, Venmo, PayPal, checks, cash, or spreadsheets.
+- They may resist apps because software feels like more work.
+- They may have 1–5 units.
+
+Core pain:
+“I don’t want a huge system. I just want rent to come in and records to be clean.”
+
+What they want:
+- Minimal setup.
+- No forced mobile app.
+- Simple rent status.
+- Clean year-end report.
+- Payment reminders.
+- Records for taxes/refinance/lenders.
+
+What to build for them:
+- “Start with one unit.”
+- Import or manually add tenant.
+- Downloadable payment ledger.
+- Tax-ready income report.
+- Simple monthly rent status board.
+
+## Competitive Landscape
+
+### TurboTenant
+Strengths:
+- Strong free positioning.
+- All-in-one landlord workflow.
+- Rent collection, listing, screening, communication, leases.
+- Large landlord adoption.
+
+Weaknesses / opportunity gap:
+- Hard to beat head-on.
+- Less agent-first positioning.
+- A smaller product can win on simplicity, speed, onboarding, and design.
+
+### Apartments.com Rental Manager
+Strengths:
+- Free rent collection.
+- Strong listing marketplace.
+- High consumer awareness.
+- ACH free; cards have fees.
+
+Weaknesses / opportunity gap:
+- Marketplace-first, not agent relationship-first.
+- Can feel broad/generic.
+- Less focused on agents building landlord relationships.
+
+### Avail
+Strengths:
+- Free plan.
+- Strong landlord management features.
+- Screening, leases, rent collection, maintenance, accounting.
+
+Weaknesses / opportunity gap:
+- Landlord-first.
+- Per-unit premium model.
+- Not designed around agent retention.
+
+### RentRedi
+Strengths:
+- More full-featured.
+- Used by landlords and real estate professionals.
+- Strong mobile app positioning.
+
+Weaknesses / opportunity gap:
+- Some users complain about clunky UX, support, payment processor issues, or complexity.
+- More feature-heavy than what a very small landlord may need.
+
+## Product Strategy
+
+MVP Principle:
+The MVP should do one job extremely well:
+
+“Allow a landlord or agent-referred landlord to set up a rent charge and collect rent through a clean bank-linked experience without storing sensitive banking data.”
+
+Do not build a full property management platform yet.
+
+MVP Must-Haves:
+1. Google/email login.
+2. Landlord/tenant roles.
+3. Create property and unit.
+4. Create lease/rent charge.
+5. Tenant invite.
+6. Tenant bank linking.
+7. Landlord payout setup.
+8. ACH rent payment.
+9. Payment status: due, processing, paid, failed, returned.
+10. Payment history.
+11. Basic receipts.
+12. Clean, mobile-friendly dashboard.
+
+MVP Should Not Include Yet:
+- Tenant screening.
+- Credit reporting.
+- Full maintenance system.
+- Full accounting system.
+- Lease generation.
+- Complex late-fee automation.
+- Autopay as a launch requirement.
+- Native mobile app.
+- AI features unless they directly simplify setup.
+
+## Payment Architecture
+
+Recommended MVP approach:
+Use Stripe as the hidden payment processor:
+- Stripe Financial Connections for tenant bank linking.
+- ACH Direct Debit for rent payments.
+- Stripe Connect Express for landlord payouts.
+- Stripe webhooks for status changes.
+
+But the interface should never feel like “Stripe.”
+
+Use product language:
+- “Link bank account”
+- “Connect payout account”
+- “Pay by bank transfer”
+- “Processing”
+- “Paid”
+
+Do not use:
+- “Create Stripe account”
+- “Stripe onboarding”
+- “Stripe payment method”
+
+Data safety rules:
+Never store:
+- Bank login credentials.
+- Bank account numbers.
+- Routing numbers.
+- Raw bank data.
+- Raw payment credentials.
+
+Store only:
+- Payment provider IDs.
+- Bank name.
+- Last four digits.
+- Verification status.
+- Payment status.
+- Rent charge ID.
+- Event IDs.
+
+Why abstract payment providers:
+The app should be built with a provider-agnostic payment layer so future providers can be added:
+- Stripe
+- Plaid Transfer
+- Dwolla
+- Modern Treasury
+- Other ACH processors
+
+This prevents a rebuild later.
+
+## UX and Design Direction
+
+Design must feel:
+- Clean.
+- Modern.
+- Trustworthy.
+- Mobile-first.
+- Not like old property management software.
+- Not like a bank dashboard from 2012.
+- Not too “startup toy.”
+- Professional enough for landlords and agents.
+
+Visual direction:
+- Off-white/light neutral backgrounds.
+- Strong dark text.
+- Soft borders.
+- Subtle shadows.
+- Rounded cards.
+- Calm accent color.
+- Elegant spacing.
+- Clear status badges.
+- Minimal icons.
+- No clutter.
+
+UX principles:
+1. One primary action per screen.
+2. Reduce dashboard noise.
+3. Every payment status should be obvious.
+4. Tenants should never feel confused about whether rent was paid.
+5. Landlords should see “who paid, who didn’t, what’s processing” instantly.
+6. Avoid forcing tenants to download an app.
+7. Make setup feel guided, not technical.
+8. Use plain English for ACH delays.
+
+Critical UX flows:
+Landlord first-time setup:
+1. Create account.
+2. Add property.
+3. Add unit.
+4. Add rent amount.
+5. Invite tenant.
+6. Connect payout bank.
+7. Done.
+Target: under 5 minutes.
+
+Tenant first-time payment:
+1. Accept invite.
+2. Create/login account.
+3. See rent amount.
+4. Link bank.
+5. Pay by bank transfer.
+6. See “Processing” with clear explanation.
+Target: under 3 minutes.
+
+Agent referral flow:
+1. Agent shares invite link.
+2. Landlord signs up.
+3. Landlord sets up unit.
+4. Agent remains linked as referral/source.
+5. Agent dashboard shows referred landlord/client.
+This is not necessarily MVP day one, but it is strategically important.
+
+## Early Go-To-Market
+
+Start with mentor’s students:
+- Warm audience.
+- Real estate-focused.
+- Likely beginner investors or agents.
+- More willing to test.
+- Easier to get feedback calls.
+- Lower customer acquisition cost.
+
+Offer:
+Do not lead with $5/month yet.
+
+Better:
+“Free beta access for founding users. Limited to first 20–25 users. In exchange, we ask for feedback and one short setup call.”
+
+First 30-day goal:
+- 10–20 founding users.
+- 5 real landlord setups.
+- 3 live rent payment attempts if legally/payment-ready.
+- 10 feedback calls.
+- Identify the clearest niche: agent, new investor, or small landlord.
+
+First 60-day goal:
+- 25–50 beta users.
+- 10–20 active rent charges.
+- 5–10 agent referrals.
+- One repeatable onboarding script.
+- One clear pricing hypothesis.
+
+First 90-day goal:
+- Decide monetization direction:
+  - Agent Pro?
+  - Concierge setup?
+  - Landlord Plus?
+  - Screening/referral monetization?
+- Cut features that users do not care about.
+- Improve onboarding and payment confidence.
+
+## Monetization Strategy
+
+Do not monetize basic rent collection first. Free competitors make this hard.
+
+Monetize around:
+
+1. Agent Pro — $29–$79/month
+- Branded landlord portal.
+- Referral tracking.
+- Landlord client CRM.
+- Renewal reminders.
+- Client follow-up prompts.
+- Portfolio notes.
+- Future sale/refi/listing opportunity tracking.
+
+2. Concierge Setup — $49–$199 one-time
+- Done-with-you property setup.
+- Tenant invite setup.
+- Payment setup guidance.
+- Migration from spreadsheet/Zelle/checks.
+- Best for non-technical landlords.
+
+3. Landlord Plus — $9–$19/month
+- Multiple units.
+- Tax-ready reports.
+- Document storage.
+- Reminders.
+- Late-fee tools.
+- Expense tracking.
+- Basic maintenance requests.
+
+4. Tenant screening / applications
+- Tenant-paid or landlord-paid.
+- Proven category and aligns with market behavior.
+
+5. Partner/referral revenue
+Longer term:
+- Renters insurance.
+- Landlord insurance.
+- Contractors/maintenance.
+- Bookkeeping.
+- Tax prep.
+- Financing/refi.
+- Property management referrals.
+
+## Key Risks
+
+Risk 1: “TurboTenant is free”
+Mitigation: Do not compete on free rent collection. Compete on agent relationship, simplicity, concierge setup, and design.
+
+Risk 2: Payment trust
+Mitigation: Use proven payment infrastructure. Be transparent about processing times. Do not claim instant payments if ACH is delayed.
+
+Risk 3: Too many features
+Mitigation: Build only rent setup, bank linking, payment status, history, and basic dashboards first.
+
+Risk 4: Agents may not care
+Mitigation: Test the pitch before building Agent Pro. Track whether agents actually invite landlords.
+
+Risk 5: Landlords resist switching
+Mitigation: Start with new leases/new tenants. Do not ask people to migrate a whole portfolio.
+
+Risk 6: Bad UX kills trust
+Mitigation: Prioritize onboarding, payment clarity, and modern UI from day one.
+
+## Recommended Pivot From Current Claude Brief
+
+Keep:
+- Supabase.
+- Netlify.
+- Google login.
+- Stripe as hidden MVP payment processor.
+- Payment abstraction.
+- Sensitive-data safety.
+- Landlord/tenant roles.
+- Rent charges and payment statuses.
+
+Add:
+- Agent as a possible role or referral source.
+- Founding user beta flow.
+- Design system requirements.
+- UX requirements for setup speed.
+- Bank/payment trust language.
+- Product analytics events.
+- Feedback capture after key actions.
+
+Remove or delay:
+- Heavy property management functionality.
+- Full accounting.
+- Complex lease tools.
+- Autopay at launch.
+- Plaid integration until payment strategy is proven.
+- Advanced analytics until there are actual users.
+
+## Product Analytics to Build In From Day One
+
+Track these events:
+- signup_started
+- signup_completed
+- role_selected
+- property_created
+- unit_created
+- tenant_invited
+- tenant_invite_accepted
+- payout_setup_started
+- payout_setup_completed
+- bank_link_started
+- bank_link_completed
+- rent_charge_created
+- rent_payment_started
+- rent_payment_submitted
+- rent_payment_processing
+- rent_payment_paid
+- rent_payment_failed
+- user_requested_help
+- user_abandoned_setup
+
+Track conversion funnels:
+1. Landlord signup → property created → tenant invited.
+2. Tenant invite accepted → bank linked → rent paid.
+3. Agent invite sent → landlord signup → active rent charge.
+
+Track feedback:
+- “What confused you?”
+- “What made you trust or not trust the payment flow?”
+- “What would make you use this instead of Zelle/TurboTenant?”
+- “Would you recommend this to another landlord/agent?”
+- “Would you pay for this? If yes, what part?”
+
+## Claude Implementation Addendum
+
+Send this to Claude:
+
+Update the product strategy based on market research.
+
+The app should not attempt to compete directly with TurboTenant, Apartments.com, Avail, or Zillow as a generic free landlord software tool. The market already has free rent collection.
+
+The product wedge should be:
+A simple, modern rent collection and landlord relationship tool for agents, new investors, and small landlords.
+
+Important product priorities:
+1. Build the simplest version of bank-linked rent collection.
+2. Make the experience feel modern, trustworthy, and mobile-first.
+3. Do not expose users to Stripe language unless required.
+4. Keep rent collection free during beta.
+5. Add an agent/referral layer to support future Agent Pro monetization.
+6. Track analytics from day one so we know where users drop off.
+7. Do not overbuild full property management features yet.
+
+Add an optional role/reference:
+- user role can still be landlord or tenant for MVP.
+- Add referral_source and referred_by_agent_id fields so an agent can invite landlords later.
+- Do not require a full agent dashboard at launch unless simple.
+
+Add to profiles:
+- referral_source text
+- referred_by_user_id uuid references profiles(id)
+- user_type text check user_type in ('landlord', 'tenant', 'agent', 'admin') if we decide to support agent role early
+
+Add analytics_events table:
+- id uuid primary key
+- user_id uuid references profiles(id)
+- event_name text
+- metadata jsonb
+- created_at timestamp
+
+Design requirements:
+- Mobile-first responsive layout.
+- Clean neutral palette.
+- Modern fintech/real-estate feel.
+- Rounded cards, soft borders, generous spacing.
+- Clear status badges.
+- No cluttered admin dashboard.
+- One primary CTA per screen.
+- Plain English payment explanations.
+- Payment statuses must be visually obvious.
+
+Core onboarding targets:
+- Landlord can create property/unit/invite tenant in under 5 minutes.
+- Tenant can accept invite/link bank/pay rent in under 3 minutes.
+
+Core MVP:
+- login/signup
+- role selection
+- landlord setup
+- tenant invite
+- tenant rent dashboard
+- bank linking
+- landlord payout setup
+- one-time ACH rent payment
+- payment status history
+- analytics events
+- simple support/feedback prompt
+
+Do not build yet:
+- tenant screening
+- credit reporting
+- full maintenance
+- full accounting
+- complex late fees
+- lease generation
+- native mobile app
+- Plaid
+- agent dashboard unless extremely simple
+
+Business model assumption:
+Basic rent collection should be free during beta.
+Long-term monetization should come from:
+- Agent Pro tools
+- concierge setup
+- Landlord Plus features
+- tax-ready reporting
+- tenant screening
+- partner/referral revenue
+
+Main product question to validate:
+Will agents and beginner landlords trust this enough to use it for real rent collection, and will agents see it as a valuable relationship-retention tool for landlord clients?

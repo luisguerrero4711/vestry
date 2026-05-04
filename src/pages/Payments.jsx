@@ -62,7 +62,13 @@ export default function Payments() {
       if (isDemoUser(user)) {
         setPayments(demoRows)
       } else {
-        const { data } = await supabase.from('payments').select('*').eq('user_id', user.id).order('payment_date', { ascending: false }).limit(50)
+        // Table is rent_payments, join tenants + properties for display names
+        const { data } = await supabase
+          .from('rent_payments')
+          .select('*, tenants(first_name, last_name), properties(name)')
+          .eq('user_id', user.id)
+          .order('due_date', { ascending: false })
+          .limit(50)
         setPayments(data || [])
       }
       setLoading(false)
@@ -88,18 +94,30 @@ export default function Payments() {
     { d: 'Apr 1',  init: 'PP', color: '#FFD93D', name: 'Priya Patel',     prop: 'Riverside Condo',     amt: '+$1,800', method: 'Bank transfer',  ref: 'ACH-7639', status: 'success', label: 'Received' },
   ]
 
-  const rows = isDemoUser(user) ? demoRows : payments.map(p => ({
-    d: p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
-    init: (p.tenant_name || 'T').slice(0, 2).toUpperCase(),
-    color: '#60A5FA',
-    name: p.tenant_name || 'Unknown',
-    prop: p.property_name || '—',
-    amt: p.amount ? `+$${Number(p.amount).toLocaleString()}` : '—',
-    method: p.payment_method || '—',
-    ref: p.reference_number || '—',
-    status: statusTone(p.status),
-    label: p.status || 'Received',
-  }))
+  const METHOD_LABELS = {
+    bank_transfer: 'Bank transfer', check: 'Check', cash: 'Cash',
+    venmo: 'Venmo', zelle: 'Zelle', other: 'Other',
+  }
+  const STATUS_LABELS = { paid: 'Received', due: 'Due', overdue: 'Overdue', partial: 'Partial' }
+
+  const rows = isDemoUser(user) ? demoRows : payments.map(p => {
+    const tenantName = p.tenants
+      ? `${p.tenants.first_name || ''} ${p.tenants.last_name || ''}`.trim()
+      : '—'
+    const displayDate = p.paid_date || p.due_date
+    return {
+      d: displayDate ? new Date(displayDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+      init: tenantName !== '—' ? tenantName.slice(0, 2).toUpperCase() : '?',
+      color: '#60A5FA',
+      name: tenantName,
+      prop: p.properties?.name || '—',
+      amt: p.amount ? `+$${Number(p.amount).toLocaleString()}` : '—',
+      method: METHOD_LABELS[p.payment_method] || p.payment_method || '—',
+      ref: p.notes || '—',
+      status: statusTone(p.status),
+      label: STATUS_LABELS[p.status] || p.status || '—',
+    }
+  })
 
   const handlePaymentAdded = (newRow) => {
     setPayments(prev => [newRow, ...prev])

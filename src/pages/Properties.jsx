@@ -28,7 +28,11 @@ export default function Properties() {
       if (isDemoUser(user)) {
         setProperties(demoProperties)
       } else {
-        const { data } = await supabase.from('properties').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+        const { data } = await supabase
+          .from('properties')
+          .select('*, units(bedrooms, bathrooms, sqft, rent_amount)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
         setProperties(data || [])
       }
       setLoading(false)
@@ -36,24 +40,27 @@ export default function Properties() {
     load()
   }, [user, navigate])
 
-  // Build display props from data
-  const displayProps = properties.map((p, i) => ({
-    id: p.id || i,
-    name: p.name || p.address || 'Property',
-    addr: [p.address, p.city, p.state].filter(Boolean).join(', ') || '—',
-    kind: kindFromType(p.property_type),
-    label: p.property_type || 'Property',
-    units: p.units || 1,
-    occupied: p.occupied_units ?? 1,
-    monthly: Number(p.monthly_rent) || 0,
-    beds: p.bedrooms || 2,
-    baths: p.bathrooms || 1,
-    sqft: p.square_feet || 1000,
-    tenants: [],
-    health: 'success',
-    healthLabel: 'On track',
-    valuation: p.market_value || 0,
-  }))
+  // Build display props from data — unit details live in units[] join, not on properties table
+  const displayProps = properties.map((p, i) => {
+    const unit = (p.units && p.units[0]) || {}
+    return {
+      id: p.id || i,
+      name: p.name || p.address || 'Property',
+      addr: [p.address, p.city, p.state].filter(Boolean).join(', ') || '—',
+      kind: kindFromType(p.type),            // FIXED: column is 'type', not 'property_type'
+      label: p.type || 'Property',
+      units: p.units_count || 1,             // FIXED: column is 'units_count'
+      occupied: p.occupied_units ?? 1,
+      monthly: Number(unit.rent_amount) || 0, // FIXED: from units table
+      beds: unit.bedrooms || 0,              // FIXED: from units table
+      baths: unit.bathrooms || 0,            // FIXED: from units table
+      sqft: unit.sqft || 0,                  // FIXED: from units table
+      tenants: [],
+      health: 'success',
+      healthLabel: 'On track',
+      valuation: p.market_value || 0,
+    }
+  })
 
   const totalMonthly = displayProps.reduce((s, p) => s + p.monthly, 0)
   const totalValue = displayProps.reduce((s, p) => s + p.valuation, 0)
