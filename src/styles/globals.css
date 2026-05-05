@@ -91,10 +91,18 @@
   --link:       oklch(0.62 0.18 255);
 }
 
-html, body, #root {
+html {
   height: 100%;
   width: 100%;
   max-width: 100%;
+  overflow-x: hidden; /* iOS Safari: must be on html, not just body */
+}
+
+body, #root {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -104,7 +112,6 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
 }
 
 /* ── Typography helpers */
@@ -440,6 +447,9 @@ h1, h2, h3 {
 .page {
   padding: 32px 36px;
   max-width: 1200px;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -527,12 +537,17 @@ h1, h2, h3 {
   display: flex;
   min-height: 100vh;
   background: var(--cream);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden; /* catch anything that escapes child containers */
 }
 
 .app-main {
   flex: 1;
-  min-width: 0;
+  min-width: 0;        /* critical: prevents flex item from overriding parent width */
+  max-width: 100%;
   overflow-y: auto;
+  overflow-x: hidden;  /* belt-and-suspenders before it reaches html/body */
 }
 
 /* ── Desktop sidebar */
@@ -814,10 +829,13 @@ h1, h2, h3 {
 /* Page content wrapper */
 .v-page {
   padding: 28px 28px 40px;
-  overflow: auto;
+  overflow-y: auto;    /* vertical scroll allowed */
+  overflow-x: hidden;  /* NEVER scroll horizontally — was "overflow: auto" which caused the mobile overflow */
   height: 100%;
   background: var(--bg-page);
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Grid layouts */
