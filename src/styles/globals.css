@@ -93,6 +93,8 @@
 
 html, body, #root {
   height: 100%;
+  width: 100%;
+  max-width: 100%;
 }
 
 body {
@@ -102,6 +104,7 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* ── Typography helpers */
@@ -823,6 +826,13 @@ h1, h2, h3 {
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
+
+/* KPI 4-up grid — collapses independently of v-grid-4 */
+.v-kpi-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
 .v-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -959,9 +969,18 @@ h1, h2, h3 {
   letter-spacing: -0.02em !important;
 }
 
+/* Payment row in dashboard — desktop default */
+.v-pay-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 120px 120px 20px;
+  gap: 12px;
+  align-items: center;
+}
+
 /* ── Tablet breakpoint ≤ 1024px */
 @media (max-width: 1024px) {
   .v-grid-4    { grid-template-columns: 1fr 1fr; }
+  .v-kpi-4     { grid-template-columns: 1fr 1fr; }
   .v-chart-row { grid-template-columns: 1fr; }
   .v-detail-row{ grid-template-columns: 1fr; }
 }
@@ -1020,6 +1039,11 @@ h1, h2, h3 {
     padding: 20px 16px;
   }
 
+  /* v-page (hi-fi pages) also needs tighter padding on mobile */
+  .v-page {
+    padding: 16px 16px 32px;
+  }
+
   .page-header {
     flex-direction: column;
     gap: 12px;
@@ -1050,5 +1074,41 @@ h1, h2, h3 {
   .modal {
     border-radius: 18px 18px 0 0;
     max-height: 94vh;
+  }
+
+  /* KPI 4-up → 2×2 on mobile */
+  .v-kpi-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* v-grid-4 → 2×2 on mobile (stat cards etc.) */
+  .v-grid-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Dashboard recent-payment rows: 3 visible columns, hide property + chevron */
+  .v-pay-row {
+    grid-template-columns: 1fr 100px 90px;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  .v-pay-row-prop,
+  .v-pay-row-chevron {
+    display: none;
+  }
+
+  /* Tenants / payments search bar: allow full flex width */
+  .v-search-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+  .v-search-wrap input {
+    width: 100% !important;
+  }
+
+  /* Header action rows: wrap on mobile */
+  .v-page-actions {
+    flex-wrap: wrap;
+    width: 100%;
   }
 }

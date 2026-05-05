@@ -395,22 +395,21 @@ export default function Dashboard() {
               No payments recorded yet. <button onClick={() => navigate('/payments')} style={{ background: 'none', border: 'none', color: VT.brand, fontWeight: 600, cursor: 'pointer' }}>Record one →</button>
             </div>
           ) : recent.map((r, i, arr) => (
-            <div key={i} style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr 120px 120px 20px',
-              gap: 12, alignItems: 'center', padding: '14px 20px',
+            <div key={i} className="v-pay-row" style={{
               borderBottom: i < arr.length - 1 ? `1px solid ${VT.line}` : 'none',
+              padding: '14px 20px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <VAvatar initials={r.init} size={36} color={r.color} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{r.name}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
                   <div style={{ fontSize: 12, color: VT.text3, fontWeight: 500, marginTop: 1 }}>{r.method}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.prop}</div>
+              <div className="v-pay-row-prop" style={{ fontSize: 13, color: VT.text2, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.prop}</div>
               <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{fmt(r.amount)}</div>
               <VPill tone={r.status}>{r.label}</VPill>
-              <VIcon.Chevron s={16} c="var(--text-3)" />
+              <div className="v-pay-row-chevron"><VIcon.Chevron s={16} c="var(--text-3)" /></div>
             </div>
           ))}
         </VSection>

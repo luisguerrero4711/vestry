@@ -108,7 +108,7 @@ export default function Reports() {
         {loading ? <div className="spinner" /> : (
           <>
             {/* KPI Summary */}
-            <div style={styles.kpiRow}>
+            <div className="v-kpi-4" style={{ marginBottom: 24 }}>
               {[
                 { label: 'Total Collected', value: fmt(totalCollected), color: 'var(--stat-col)' },
                 { label: 'Total Expenses',  value: fmt(totalExpenses),  color: 'var(--text)' },
@@ -246,9 +246,6 @@ const styles = {
   filterActive: {
     background: 'var(--active-bg)', color: 'var(--active-fg)',
     borderColor: 'var(--pill-bd)', fontWeight: 600,
-  },
-  kpiRow: {
-    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24,
   },
   kpi: {
     background: 'var(--warm-white)', border: '1px solid var(--border)',

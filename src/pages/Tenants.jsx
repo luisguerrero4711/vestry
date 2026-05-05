@@ -74,8 +74,8 @@ export default function Tenants() {
             <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500, marginBottom: 4 }}>{tenants.length} tenants · {tenants.filter(t => t.status === 'active' || !t.status).length} active</div>
             <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Tenants</h1>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ position: 'relative' }}>
+          <div className="v-page-actions" style={{ display: 'flex', gap: 8 }}>
+            <div className="v-search-wrap" style={{ position: 'relative', flex: 1, minWidth: 140, maxWidth: 260 }}>
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', pointerEvents: 'none' }}>
                 <VIcon.Search s={14} c="var(--text-3)" />
               </div>
@@ -87,7 +87,7 @@ export default function Tenants() {
                   padding: '8px 12px 8px 32px',
                   background: VT.card, border: `1px solid ${VT.line}`,
                   borderRadius: 8, fontFamily: VT.fontText, fontSize: 13,
-                  color: VT.text1, outline: 'none', fontWeight: 500, width: 220,
+                  color: VT.text1, outline: 'none', fontWeight: 500, width: '100%',
                 }}
               />
             </div>
@@ -97,7 +97,7 @@ export default function Tenants() {
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '8px 14px', background: VT.brand, border: 'none',
                 borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+                boxShadow: '0 1px 2px rgba(37,99,235,0.3)', flexShrink: 0,
               }}><VIcon.Plus s={14} c="#fff" /> Add tenant</button>
           </div>
         </div>
