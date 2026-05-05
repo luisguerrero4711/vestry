@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import ContinueWithGoogleButton from '../components/ContinueWithGoogleButton'
 
 export default function Auth() {
   const [mode, setMode]       = useState('signin') // 'signin' | 'signup'
@@ -99,6 +100,16 @@ export default function Auth() {
           </button>
         </form>
 
+        {/* ── Divider ── */}
+        <div style={styles.divider}>
+          <span style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <span style={styles.dividerLine} />
+        </div>
+
+        {/* ── Google sign-in ── */}
+        <ContinueWithGoogleButton />
+
         <p style={styles.legal}>
           Free plan includes 1 property. No credit card required.
         </p>
@@ -183,6 +194,23 @@ const styles = {
   form: {
     display: 'flex',
     flexDirection: 'column',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    margin: '20px 0 16px',
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    background: 'var(--border)',
+    display: 'block',
+  },
+  dividerText: {
+    fontSize: 12,
+    color: 'var(--muted)',
+    flexShrink: 0,
   },
   legal: {
     textAlign: 'center',

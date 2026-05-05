@@ -132,13 +132,24 @@ All tables have `user_id uuid` FK → `auth.users(id) ON DELETE CASCADE`. RLS en
 
 | Table | Key columns |
 |-------|------------|
-| `properties` | id, user_id, name, address, city, state, type, units_count, photo_url |
+| `properties` | id, user_id, name, address, city, state, **type** (not property_type), **units_count** (not units), photo_url |
 | `units` | id, property_id, unit_number, bedrooms, bathrooms, sqft, rent_amount |
-| `tenants` | id, user_id, property_id, unit_id, first_name, last_name, email, phone, move_in_date, status |
-| `leases` | id, user_id, tenant_id, property_id, unit_id, start_date, end_date, monthly_rent, security_deposit, pdf_url |
-| `payments` | id, user_id, tenant_id, property_id, amount, payment_date, payment_method, status, reference_number |
+| `tenants` | id, user_id, property_id, **first_name**, **last_name** (not `name`), email, phone, move_in_date, **status: active\|past\|prospect** |
+| `leases` | id, user_id, tenant_id (FK), property_id (FK), start_date, end_date, monthly_rent, security_deposit, pdf_url |
+| **`rent_payments`** | id, user_id, tenant_id (FK), property_id (FK), amount, **due_date**, **paid_date**, payment_method, **status: paid\|due\|overdue\|partial**, notes |
 | `expenses` | id, user_id, property_id, description, amount, category, date |
 | `profiles` | id (= auth.users.id), plan (free/pro/portfolio), stripe_customer_id |
+
+⚠️ **CRITICAL SCHEMA NOTES — do not get these wrong:**
+- Payments table is `rent_payments` — NOT `payments`
+- Properties table has `type` column — NOT `property_type`
+- Properties table has `units_count` — NOT `units`
+- Tenants use `first_name` + `last_name` columns — NOT a single `name` column
+- `rent_payments` has `due_date` + `paid_date` — NOT `payment_date`
+- `rent_payments` status values: `paid | due | overdue | partial`
+- Tenant status values: `active | past | prospect`
+- Unit details (beds/baths/sqft/rent) live in `units` table via FK — NOT on `properties`
+- All Supabase joins use: `.select('*, tenants(first_name, last_name), properties(name)')`
 
 **Schema file location:** `vestry/supabase/schema.sql` — run once in Supabase SQL editor to initialize.
 
@@ -152,7 +163,7 @@ All tables have `user_id uuid` FK → `auth.users(id) ON DELETE CASCADE`. RLS en
 - All DB queries filter by `user_id = user.id`
 
 ### Demo Login
-- Email: `demo@vestry.app` / Password: `vestry2025!` (or similar — check Supabase dashboard)
+- Email: `demo@vestry.app` / Password: `vestry2024`
 - `isDemoUser(user)` returns `true` when `user.id === 'demo-user-id'`
 - All pages check `isDemoUser` and serve local `demoLeases`, `demoTenants`, `demoProperties` arrays
 - CRUD modals in demo mode: add to local state only (no Supabase write)
@@ -189,31 +200,34 @@ All three modals follow the same pattern:
 
 ## Current Build Status
 
-**As of last push (commit `64eab9e` on main):**
+**As of last push (commit `026c33c` on main):**
 
 ✅ Full hi-fi design implemented (Geist font, iOS blue tokens, all pages)  
-✅ Dashboard — stat cards with sparklines, donut chart, net income bezier chart  
-✅ Properties — card grid with SVG property thumbnails, Add Property modal wired  
-✅ Tenants — table view with search, Add Tenant modal wired  
-✅ Payments — hero stats card + monthly bar chart + transaction table, Record Payment modal wired  
-✅ Leases — list + detail side panel with financials + key terms  
+✅ Dashboard — stat cards with sparklines, donut chart, net income bezier chart; **real Supabase data for non-demo users**  
+✅ Properties — card grid with SVG property thumbnails, Add Property modal wired; **units join fixed**  
+✅ Tenants — table view with search, Add Tenant modal wired; **first_name/last_name + properties join fixed**  
+✅ Payments — hero stats card + monthly bar chart + transaction table, Record Payment modal wired; **rent_payments table + correct joins**  
+✅ Leases — list + detail side panel; **tenants + properties join fixed**  
+✅ Expenses — full CRUD with category filtering, edit/delete, demo guard  
 ✅ Settings — email change + password change + sign out  
 ✅ Sidebar — Settings link added (Account section)  
 ✅ Mobile responsive — all grids collapse correctly on small screens  
-✅ Hamburger menu for mobile  
 ✅ Demo mode fully functional (all pages show demo data; CRUD modals work in session)  
-✅ Build clean — 0 errors, 497kB bundle  
+✅ AddPropertyModal — correct schema: `type`, `units_count`, unit insert into `units` table  
+✅ AddTenantModal — correct schema: `first_name`/`last_name`, `property_id` FK, status `active|past|prospect`  
+✅ RecordPaymentModal — correct schema: `rent_payments` table, `due_date`/`paid_date`, status `paid|due|overdue|partial`  
+✅ Build clean — 0 errors, ~506kB bundle  
 ✅ Deployed to Netlify via GitHub auto-deploy  
+✅ Onboarding PDF created: `Vestry Onboarding Guide.pdf` in vestry/ folder  
 
 ---
 
 ## Known Open Items / Next Steps
 
 ### High Priority
-- **Expenses page** — currently a placeholder; needs the same table/CRUD treatment as Payments
 - **Reports page** — currently placeholder; could show YTD income summary, occupancy rate, expense breakdown
 - **Leases "New lease" button** — the button exists but no modal is wired up yet
-- **Real demo credentials** — confirm `demo@vestry.app` exists in Supabase auth with `id = 'demo-user-id'`
+- **Monthly bar chart on Payments** — currently static demo data even for real users; needs real aggregation per month
 
 ### Medium Priority
 - **Stripe webhook** — needs Netlify serverless function to receive `checkout.session.completed` and update `profiles.plan`

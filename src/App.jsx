@@ -1,17 +1,19 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 
-import Auth        from './pages/Auth'
-import Dashboard   from './pages/Dashboard'
-import Properties  from './pages/Properties'
-import Tenants     from './pages/Tenants'
-import Payments    from './pages/Payments'
-import Leases      from './pages/Leases'
-import Expenses    from './pages/Expenses'
-import Reports     from './pages/Reports'
-import Pricing     from './pages/Pricing'
-import Admin       from './pages/Admin'
-import Settings    from './pages/Settings'
+import Auth           from './pages/Auth'
+import AuthCallback    from './pages/AuthCallback'
+import RoleSelection   from './pages/RoleSelection'
+import Dashboard       from './pages/Dashboard'
+import Properties      from './pages/Properties'
+import Tenants         from './pages/Tenants'
+import Payments        from './pages/Payments'
+import Leases          from './pages/Leases'
+import Expenses        from './pages/Expenses'
+import Reports         from './pages/Reports'
+import Pricing         from './pages/Pricing'
+import Admin           from './pages/Admin'
+import Settings        from './pages/Settings'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -30,7 +32,10 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+          <Route path="/auth"          element={<PublicRoute><Auth /></PublicRoute>} />
+          {/* OAuth callback — no auth wrapper; Supabase establishes the session here */}
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/role-selection" element={<PrivateRoute><RoleSelection /></PrivateRoute>} />
 
           <Route path="/dashboard"  element={<PrivateRoute><Dashboard  /></PrivateRoute>} />
           <Route path="/properties" element={<PrivateRoute><Properties /></PrivateRoute>} />
