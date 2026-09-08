@@ -9,10 +9,15 @@
 --
 -- This replaces the old split files (schema.sql, profiles_migration.sql,
 -- google_auth_migration.sql, admin_migration.sql) — it is the four of
--- them reconciled in dependency order, with two security fixes:
+-- them reconciled in dependency order, with these fixes:
 --   • removed a "USING (true)" policy on profiles that let any logged-in
 --     user read/write every other user's profile row
 --   • property_summary view now runs with security_invoker (respects RLS)
+--   • the "admins can see every profile" check runs through a SECURITY
+--     DEFINER function (is_platform_admin) instead of a sub-select on
+--     profiles from inside a profiles policy — the latter throws
+--     "42P17: infinite recursion detected in policy for relation profiles"
+--     and breaks every authenticated read of profiles.
 -- ============================================================
 
 -- Accounts that should get platform-admin access automatically on sign-up.
@@ -214,6 +219,23 @@ create trigger on_auth_user_created
   for each row execute function handle_new_user();
 
 -- ============================================================
+-- ADMIN CHECK  (SECURITY DEFINER → bypasses RLS, so it is safe to
+-- call from inside a policy ON profiles without infinite recursion)
+-- ============================================================
+create or replace function public.is_platform_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select coalesce((select p.is_admin from public.profiles p where p.id = auth.uid()), false);
+$$;
+
+revoke all on function public.is_platform_admin() from public;
+grant execute on function public.is_platform_admin() to anon, authenticated, service_role;
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 
@@ -241,14 +263,16 @@ create policy "Users update own profile"
   with check (auth.uid() = id);
 
 -- Platform admins can see and edit every profile (for the /admin panel).
+-- Uses is_platform_admin() (SECURITY DEFINER) — a bare sub-select on
+-- profiles here would recurse (42P17) and break all authenticated reads.
 create policy "Admins read all profiles"
   on profiles for select
-  using (coalesce((select p.is_admin from profiles p where p.id = auth.uid()), false));
+  using (public.is_platform_admin());
 
 create policy "Admins update any profile"
   on profiles for update
-  using (coalesce((select p.is_admin from profiles p where p.id = auth.uid()), false))
-  with check (coalesce((select p.is_admin from profiles p where p.id = auth.uid()), false));
+  using (public.is_platform_admin())
+  with check (public.is_platform_admin());
 
 -- (No policy for the service_role key — it bypasses RLS by design, which is
 --  what the Stripe webhook / admin-stats Netlify functions rely on.)
@@ -312,7 +336,7 @@ language plpgsql
 security definer
 as $$
 begin
-  if not coalesce((select p.is_admin from profiles p where p.id = auth.uid() limit 1), false) then
+  if not public.is_platform_admin() then
     raise exception 'Access denied: admin only';
   end if;
 
