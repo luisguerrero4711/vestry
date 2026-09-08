@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { routeAfterAuth } from '../lib/postAuthRoute'
 
 // ─────────────────────────────────────────────────────────────
 // /auth/callback
@@ -60,20 +61,8 @@ export default function AuthCallback() {
         console.error('Profile upsert failed:', upsertError.message)
       }
 
-      // ── Fetch final profile to determine redirect ──────────
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, is_admin')
-        .eq('id', user.id)
-        .single()
-
-      if (profile?.is_admin) {
-        navigate('/admin', { replace: true })
-      } else if (profile?.role === 'landlord' || profile?.role === 'tenant') {
-        navigate('/dashboard', { replace: true })
-      } else {
-        navigate('/role-selection', { replace: true })
-      }
+      // ── Redirect based on role (shared with email/password sign-in) ──
+      await routeAfterAuth(navigate)
     }
 
     // ── Listen for the SIGNED_IN event (PKCE flow fires this) ─

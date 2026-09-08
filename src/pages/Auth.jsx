@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { routeAfterAuth } from '../lib/postAuthRoute'
 import ContinueWithGoogleButton from '../components/ContinueWithGoogleButton'
 
 export default function Auth() {
@@ -23,7 +24,7 @@ export default function Auth() {
     if (mode === 'signin') {
       const { error } = await signIn(email, password)
       if (error) { setError(error.message); setLoading(false); return }
-      navigate('/dashboard')
+      await routeAfterAuth(navigate)
     } else {
       const { error } = await signUp(email, password)
       if (error) { setError(error.message); setLoading(false); return }
