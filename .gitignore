@@ -4,3 +4,5 @@ dist
 .env.local
 .DS_Store
 *.log
+HANDOFF/
+vite.config.js.timestamp-*
