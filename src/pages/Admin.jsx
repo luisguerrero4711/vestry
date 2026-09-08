@@ -336,7 +336,9 @@ export default function Admin() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
                   All Accounts
                   <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>
-                    {stats.total} users
+                    {filtered.length === users.length
+                      ? `${users.length} ${users.length === 1 ? 'account' : 'accounts'}`
+                      : `${filtered.length} of ${users.length}`}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
