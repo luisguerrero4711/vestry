@@ -164,14 +164,14 @@ export default function PropertyDetail() {
           <VIcon.ChevronLeft s={13} c="var(--text-3)" /> Properties
         </Link>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-          <div>
+          <div style={{ minWidth: 0, flex: '1 1 200px' }}>
             <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500, marginBottom: 4 }}>
               {property.type?.replace('_', ' ') || 'Property'}{addr ? ` · ${addr}` : ''}
             </div>
-            <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>{property.name}</h1>
+            <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1, overflowWrap: 'anywhere' }}>{property.name}</h1>
           </div>
           <button onClick={() => setUnitModal('new')} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', flexShrink: 0,
             background: VT.brand, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
             color: '#fff', cursor: 'pointer', boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
           }}><VIcon.Plus s={14} c="#fff" /> Add unit</button>
@@ -182,7 +182,7 @@ export default function PropertyDetail() {
           {kpis.map(([l, v, c, sub], i) => (
             <div key={l} style={{ padding: '4px 22px', borderRight: i < 3 ? `1px solid ${VT.line}` : 'none' }}>
               <div style={{ fontSize: 12, color: VT.text2, fontWeight: 500, marginBottom: 4 }}>{l}</div>
-              <div style={{ fontFamily: VT.fontDisplay, fontSize: 20, fontWeight: 600, letterSpacing: '-0.025em', color: c }}>{v}</div>
+              <div style={{ fontFamily: VT.fontNum, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: c }}>{v}</div>
               <div style={{ fontSize: 11, color: VT.text3, fontWeight: 500, marginTop: 2 }}>{sub}</div>
             </div>
           ))}
@@ -217,7 +217,7 @@ export default function PropertyDetail() {
                         {lease
                           ? <VPill tone={leaseStatusTone(lease)}>{leaseTenant || 'Leased'} · {leaseStatusLabel(lease)}</VPill>
                           : <VPill tone="neutral">Vacant</VPill>}
-                        <div style={{ fontFamily: VT.fontDisplay, fontSize: 14, fontWeight: 600 }}>{money(lease?.monthly_rent || unit.rent_amount)}<span style={{ fontSize: 11, color: VT.text3, fontWeight: 500 }}>/mo</span></div>
+                        <div style={{ fontFamily: VT.fontNum, fontSize: 15, fontWeight: 600 }}>{money(lease?.monthly_rent || unit.rent_amount)}<span style={{ fontSize: 11, color: VT.text3, fontWeight: 500 }}>/mo</span></div>
                         <button onClick={() => setUnitModal({ unit })} title="Edit unit" style={iconBtn}><VIcon.Settings s={13} c={VT.text2} /></button>
                         <button onClick={() => deleteUnit(unit)} title="Delete unit" style={iconBtn}><VIcon.X s={13} c={VT.red} /></button>
                       </div>
@@ -240,7 +240,7 @@ export default function PropertyDetail() {
                             return (
                               <div key={room.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderTop: `1px solid ${VT.line}`, flexWrap: 'wrap' }}>
                                 <div style={{ minWidth: 130, fontSize: 13, fontWeight: 600 }}>{room.name}</div>
-                                <div style={{ minWidth: 70, fontFamily: VT.fontDisplay, fontSize: 13, fontWeight: 600, color: VT.text2 }}>{room.monthly_rent ? money(room.monthly_rent) : '—'}</div>
+                                <div style={{ minWidth: 70, fontFamily: VT.fontNum, fontSize: 14, fontWeight: 600, color: VT.text2 }}>{room.monthly_rent ? money(room.monthly_rent) : '—'}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 180 }}>
                                   {occupant && <VAvatar initials={initials(fullName(occupant))} size={22} />}
                                   <select

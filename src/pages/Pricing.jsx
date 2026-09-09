@@ -126,8 +126,8 @@ export default function Pricing() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, margin: '6px 0 4px' }}>
                       {p.price === 0
-                        ? <span style={{ fontFamily: VT.fontDisplay, fontSize: 34, fontWeight: 700 }}>Free</span>
-                        : <><span style={{ fontFamily: VT.fontDisplay, fontSize: 34, fontWeight: 700 }}>${p.price}</span><span style={{ fontSize: 13, color: VT.text3, marginBottom: 6 }}>/mo</span></>}
+                        ? <span style={{ fontFamily: VT.fontNum, fontSize: 34, fontWeight: 600 }}>Free</span>
+                        : <><span style={{ fontFamily: VT.fontNum, fontSize: 34, fontWeight: 600 }}>${p.price}</span><span style={{ fontSize: 13, color: VT.text3, marginBottom: 6 }}>/mo</span></>}
                     </div>
                     <ul style={{ listStyle: 'none', padding: 0, margin: '10px 0 18px', display: 'flex', flexDirection: 'column', gap: 9, flex: 1 }}>
                       {FEATURES[key].map(f => (

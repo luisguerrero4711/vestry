@@ -121,8 +121,8 @@ export default function Tenants() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <VAvatar initials={initials(name)} size={38} color={avatarColor(name)} />
                             <div>
-                              <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em' }}>{name}</div>
-                              {since && <div style={{ fontSize: 12, color: VT.text3, fontWeight: 500, marginTop: 1 }}>Since {since}</div>}
+                              <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>{name}</div>
+                              {since && <div style={{ fontSize: 12, color: VT.text3, fontWeight: 500, marginTop: 1, whiteSpace: 'nowrap' }}>Since {since}</div>}
                             </div>
                           </div>
                         </td>

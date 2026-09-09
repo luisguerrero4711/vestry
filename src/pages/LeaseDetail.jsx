@@ -136,7 +136,7 @@ export default function LeaseDetail() {
               ))}
               <div style={{ borderTop: `1px solid ${VT.line}`, paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>Lease value</span>
-                <span style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600 }}>{money(Number(lease.monthly_rent || 0) * months)}</span>
+                <span style={{ fontFamily: VT.fontNum, fontSize: 16, fontWeight: 600 }}>{money(Number(lease.monthly_rent || 0) * months)}</span>
               </div>
             </div>
           </VSection>

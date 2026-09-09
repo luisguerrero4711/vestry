@@ -70,7 +70,7 @@ export default function Reports() {
 
   const th = { textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 600, color: VT.text3, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }
   const td = { padding: '12px 16px', fontSize: 13, fontWeight: 500 }
-  const mono = { fontFamily: VT.fontDisplay, fontWeight: 600 }
+  const mono = { fontFamily: VT.fontNum, fontWeight: 600 }
 
   return (
     <Layout>
@@ -82,7 +82,7 @@ export default function Reports() {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button onClick={() => setYear(y => y - 1)} style={{ padding: '6px 12px', border: `1px solid ${VT.line}`, borderRadius: 8, background: VT.card, cursor: 'pointer', fontWeight: 600, color: VT.text2 }}>◀</button>
-            <span style={{ fontFamily: VT.fontDisplay, fontSize: 20, fontWeight: 600, minWidth: 56, textAlign: 'center' }}>{year}</span>
+            <span style={{ fontFamily: VT.fontNum, fontSize: 20, fontWeight: 600, minWidth: 56, textAlign: 'center' }}>{year}</span>
             <button onClick={() => setYear(y => y + 1)} style={{ padding: '6px 12px', border: `1px solid ${VT.line}`, borderRadius: 8, background: VT.card, cursor: 'pointer', fontWeight: 600, color: VT.text2 }}>▶</button>
           </div>
         </div>
@@ -109,7 +109,7 @@ export default function Reports() {
                 { label: 'Occupancy', value: `${occ.pct}%`, color: VT.green, sub: `${occ.occupiedUnits}/${occ.totalUnits} units` },
               ].map(k => (
                 <div key={k.label} style={{ background: VT.card, border: `1px solid ${VT.line}`, borderRadius: 'var(--r-md)', padding: '16px 20px' }}>
-                  <div style={{ fontFamily: VT.fontDisplay, fontSize: 26, fontWeight: 600, lineHeight: 1, marginBottom: 4, color: k.color }}>{k.value}</div>
+                  <div style={{ fontFamily: VT.fontNum, fontSize: 32, fontWeight: 600, lineHeight: 1, marginBottom: 4, color: k.color }}>{k.value}</div>
                   <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: VT.text3 }}>{k.label}</div>
                   {k.sub && <div style={{ fontSize: 11, color: VT.text3, fontWeight: 500, marginTop: 2 }}>{k.sub}</div>}
                 </div>

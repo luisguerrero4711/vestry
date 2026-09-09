@@ -94,7 +94,7 @@ export default function Leases() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                       <VPill tone={leaseStatusTone(l)}>{leaseStatusLabel(l)}</VPill>
-                      <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>${Number(l.monthly_rent || 0).toLocaleString()}/mo</div>
+                      <div style={{ fontFamily: VT.fontNum, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em' }}>${Number(l.monthly_rent || 0).toLocaleString()}/mo</div>
                     </div>
                   </div>
                   <div>

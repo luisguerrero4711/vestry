@@ -91,16 +91,16 @@ export default function RentRoll() {
                 <tbody>
                   {rows.map((r, i) => (
                     <tr key={r.unitId || i} style={{ borderTop: `1px solid ${VT.line}` }}>
-                      <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 600 }}>
+                      <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
                         <Link to={`/properties/${r.propertyId}`} style={{ color: VT.text1, textDecoration: 'none' }}>{r.propertyName}</Link>
                       </td>
-                      <td style={{ padding: '14px 20px', fontSize: 13, color: VT.text2, fontWeight: 500 }}>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>
                         Unit {r.unitNumber}{r.roomCount ? ` · ${r.roomCount} rooms` : ''}
                       </td>
                       <td style={{ padding: '14px 20px', fontSize: 13, color: VT.text2, fontWeight: 500 }}>
                         {(r.beds ?? '—')} bd / {(r.baths ?? '—')} ba
                       </td>
-                      <td style={{ padding: '14px 20px', fontFamily: VT.fontDisplay, fontSize: 14, fontWeight: 600 }}>{money(r.scheduledRent)}</td>
+                      <td style={{ padding: '14px 20px', fontFamily: VT.fontNum, fontSize: 15, fontWeight: 600 }}>{money(r.scheduledRent)}</td>
                       <td style={{ padding: '14px 20px', fontSize: 13, color: r.occupantName ? VT.text1 : VT.text3, fontWeight: 500 }}>{r.occupantName || 'Vacant'}</td>
                       <td style={{ padding: '14px 20px' }}>
                         {r.occupied

@@ -843,24 +843,24 @@ h1, h2, h3 {
 /* Grid layouts */
 .v-grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
 /* KPI 4-up grid — collapses independently of v-grid-4 */
 .v-kpi-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 .v-grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 .v-grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
 }
 /* chart row: big chart + small sidebar */
@@ -1098,19 +1098,23 @@ h1, h2, h3 {
 
   /* KPI 4-up → 2×2 on mobile */
   .v-kpi-4 {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   /* v-grid-4 → 2×2 on mobile (stat cards etc.) */
   .v-grid-4 {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .v-grid-3 {
+    grid-template-columns: 1fr;
   }
 
-  /* Dashboard recent-payment rows: 3 visible columns, hide property + chevron */
+  /* Dashboard recent-payment rows: name + amount + status, hide property + chevron */
   .v-pay-row {
-    grid-template-columns: 1fr 100px 90px;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 10px;
     padding: 12px 16px;
+    align-items: center;
   }
   .v-pay-row-prop,
   .v-pay-row-chevron {

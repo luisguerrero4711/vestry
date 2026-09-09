@@ -135,7 +135,7 @@ export default function Payments() {
           <div style={{ padding: 24, borderRight: `1px solid ${VT.line}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500 }}>Collected this month</div>
-              <div style={{ fontFamily: VT.fontDisplay, fontSize: 40, fontWeight: 600, letterSpacing: '-0.03em', marginTop: 4, lineHeight: 1 }}>{money(collected)}</div>
+              <div style={{ fontFamily: VT.fontNum, fontSize: 44, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 4, lineHeight: 1 }}>{money(collected)}</div>
               {onTime != null && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, fontSize: 13, fontWeight: 600, color: onTime >= 90 ? VT.green : VT.amber }}>
                   {onTime}% on-time
@@ -146,7 +146,7 @@ export default function Payments() {
               {[['Outstanding', money(owed), VT.red], ['Expenses', money(spent), VT.amber], ['Net', money(collected - spent), VT.green]].map(([l, v, c]) => (
                 <div key={l}>
                   <div style={{ fontSize: 11, color: VT.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{l}</div>
-                  <div style={{ fontFamily: VT.fontDisplay, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: c, marginTop: 2 }}>{v}</div>
+                  <div style={{ fontFamily: VT.fontNum, fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: c, marginTop: 2 }}>{v}</div>
                 </div>
               ))}
             </div>
@@ -202,11 +202,11 @@ export default function Payments() {
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <VAvatar initials={name !== '—' ? name.slice(0, 2).toUpperCase() : '?'} size={26} />
-                            <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{name}</span>
                           </div>
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>{p.properties?.name || '—'}</td>
-                        <td style={{ padding: '14px 16px', fontFamily: VT.fontDisplay, fontSize: 14, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', color: p.status === 'overdue' ? VT.red : VT.text1 }}>{money(p.amount)}</td>
+                        <td style={{ padding: '14px 16px', fontFamily: VT.fontNum, fontSize: 15, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', color: p.status === 'overdue' ? VT.red : VT.text1 }}>{money(p.amount)}</td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500 }}>{METHOD_LABELS[p.payment_method] || p.payment_method || '—'}</td>
                         <td style={{ padding: '14px 16px' }}><VPill tone={st.tone}>{st.label}</VPill></td>
                         <td style={{ padding: '14px 12px', textAlign: 'right' }}>

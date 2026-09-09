@@ -122,7 +122,7 @@ export default function Properties() {
           {summaryTiles.map(([l, v, c], i) => (
             <div key={l} style={{ padding: '4px 22px', borderRight: i < 3 ? `1px solid ${VT.line}` : 'none' }}>
               <div style={{ fontSize: 12, color: VT.text2, fontWeight: 500, marginBottom: 4 }}>{l}</div>
-              <div style={{ fontFamily: VT.fontDisplay, fontSize: 20, fontWeight: 600, letterSpacing: '-0.025em', color: c }}>{v}</div>
+              <div style={{ fontFamily: VT.fontNum, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: c }}>{v}</div>
             </div>
           ))}
         </div>
@@ -159,7 +159,7 @@ export default function Properties() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: 4 }}>
                     <div>
                       <div style={{ fontSize: 10, color: VT.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Scheduled rent</div>
-                      <div style={{ fontFamily: VT.fontDisplay, fontSize: 20, fontWeight: 600, letterSpacing: '-0.025em' }}>
+                      <div style={{ fontFamily: VT.fontNum, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em' }}>
                         {p.monthly > 0 ? `$${p.monthly.toLocaleString()}` : <span style={{ color: VT.text3 }}>—</span>}
                       </div>
                     </div>

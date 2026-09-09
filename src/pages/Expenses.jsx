@@ -160,7 +160,7 @@ export default function Expenses() {
                 background: VT.card, border: `1px solid ${catFilter === x.cat ? 'var(--brand)' : VT.line}`, borderRadius: 10,
                 padding: '10px 16px', cursor: 'pointer',
               }}>
-                <div style={{ fontFamily: VT.fontDisplay, fontSize: 20, fontWeight: 600 }}>{fmt(x.total)}</div>
+                <div style={{ fontFamily: VT.fontNum, fontSize: 22, fontWeight: 600 }}>{fmt(x.total)}</div>
                 <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: VT.text3, fontWeight: 600, marginTop: 2 }}>{x.cat}</div>
               </div>
             ))}
@@ -206,7 +206,7 @@ export default function Expenses() {
                       <td style={{ padding: '14px 16px' }}><VPill tone="neutral">{cap(exp.category)}</VPill></td>
                       <td style={{ padding: '14px 16px', fontSize: 12, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>{new Date(exp.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
                       <td style={{ padding: '14px 16px', fontSize: 12, color: VT.text3, fontWeight: 500 }}>{exp.vendor || '—'}</td>
-                      <td style={{ padding: '14px 16px', fontFamily: VT.fontDisplay, fontSize: 14, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(exp.amount)}</td>
+                      <td style={{ padding: '14px 16px', fontFamily: VT.fontNum, fontSize: 15, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(exp.amount)}</td>
                       <td style={{ padding: '14px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button onClick={() => setModal(exp)} style={{ background: 'none', border: 'none', color: VT.text2, fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: '4px 6px' }}>Edit</button>
                         <button onClick={() => handleDelete(exp.id)} style={{ background: 'none', border: 'none', color: VT.red, fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: '4px 6px' }}>Del</button>

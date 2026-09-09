@@ -26,19 +26,21 @@ function StatCard({ label, value, delta, deltaPositive, sparkline, accent }) {
       padding: 20, borderRadius: 'var(--r-md)',
       background: VT.card, boxShadow: VT.shadowCard,
       display: 'flex', flexDirection: 'column', gap: 4,
+      minWidth: 0, overflow: 'hidden',
     }}>
       <div style={{ fontFamily: VT.fontText, fontSize: 13, fontWeight: 500, color: VT.text2, letterSpacing: '-0.01em' }}>{label}</div>
-      <div style={{ fontFamily: VT.fontDisplay, fontSize: 28, fontWeight: 600, color: VT.text1, letterSpacing: '-0.025em', lineHeight: 1.1 }}>{value}</div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+      <div style={{ fontFamily: VT.fontNum, fontSize: 34, fontWeight: 600, color: VT.text1, letterSpacing: '-0.02em', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6 }}>
         <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 3,
+          display: 'inline-flex', alignItems: 'center', gap: 3, minWidth: 0,
           fontFamily: VT.fontText, fontSize: 12, fontWeight: 500,
           color: deltaPositive ? VT.green : VT.red,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           <VIcon.Up s={11} c={deltaPositive ? 'var(--green)' : 'var(--red)'} />
           {delta}
         </div>
-        <svg width={w * 0.55} height={h * 0.7} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+        <svg width="60" height="26" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ flexShrink: 0 }}>
           <defs>
             <linearGradient id={sparkId} x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor={accent || 'var(--brand)'} stopOpacity="0.18" />
@@ -66,7 +68,7 @@ function CollectionDonut({ pct = 60, size = 140 }) {
           strokeDasharray={`${dash} ${c}`} strokeLinecap="round" />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ fontFamily: VT.fontDisplay, fontSize: 28, fontWeight: 600, color: VT.text1, letterSpacing: '-0.03em', lineHeight: 1 }}>{pct}%</div>
+        <div style={{ fontFamily: VT.fontNum, fontSize: 34, fontWeight: 600, color: VT.text1, letterSpacing: '-0.02em', lineHeight: 1 }}>{pct}%</div>
         <div style={{ fontFamily: VT.fontText, fontSize: 11, color: VT.text3, marginTop: 4, fontWeight: 500 }}>collected</div>
       </div>
     </div>
@@ -318,7 +320,7 @@ export default function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500 }}>Net income</div>
-                <div style={{ fontFamily: VT.fontDisplay, fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginTop: 2 }}>
+                <div style={{ fontFamily: VT.fontNum, fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', marginTop: 2 }}>
                   {fmt(netTotal)} <span style={{ color: VT.text3, fontSize: 14, fontWeight: 500 }}>· this month</span>
                 </div>
               </div>
@@ -331,7 +333,7 @@ export default function Dashboard() {
 
           <div style={{ background: VT.card, borderRadius: 'var(--r-md)', padding: 22, boxShadow: VT.shadowCard, display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: 13, color: VT.text2, fontWeight: 500, marginBottom: 4 }}>Collection rate · this month</div>
-            <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 500, color: VT.text1, letterSpacing: '-0.01em' }}>{paidCount} of {totalCount} paid</div>
+            <div style={{ fontFamily: VT.fontNum, fontSize: 15, fontWeight: 500, color: VT.text1, letterSpacing: '-0.01em' }}>{paidCount} of {totalCount} paid</div>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, padding: '12px 0' }}>
               <CollectionDonut pct={collectionPct} size={130} />
             </div>
@@ -341,7 +343,7 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 500, color: VT.text2 }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: c }} /> {l}
                   </div>
-                  <div style={{ fontFamily: VT.fontDisplay, fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em' }}>{v}</div>
+                  <div style={{ fontFamily: VT.fontNum, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em' }}>{v}</div>
                 </div>
               ))}
             </div>
@@ -406,11 +408,11 @@ export default function Dashboard() {
                 <VAvatar initials={r.init} size={36} color={r.color} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-                  <div style={{ fontSize: 12, color: VT.text3, fontWeight: 500, marginTop: 1 }}>{r.method}</div>
+                  <div style={{ fontSize: 12, color: VT.text3, fontWeight: 500, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.method}</div>
                 </div>
               </div>
               <div className="v-pay-row-prop" style={{ fontSize: 13, color: VT.text2, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.prop}</div>
-              <div style={{ fontFamily: VT.fontDisplay, fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em' }}>{fmt(r.amount)}</div>
+              <div style={{ fontFamily: VT.fontNum, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em' }}>{fmt(r.amount)}</div>
               <VPill tone={r.status}>{r.label}</VPill>
               <div className="v-pay-row-chevron"><VIcon.Chevron s={16} c="var(--text-3)" /></div>
             </div>
