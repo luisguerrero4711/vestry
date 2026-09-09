@@ -126,7 +126,16 @@ export const demoTenants = [
 ]
 
 // ── Payments (current + last month)
-export const demoPayments = [
+// `type`/`state`/`amount_cents`/`period` mirror the ledger migration so demo
+// mode exercises the same code paths as a migrated database.
+const _mkLedger = (p) => ({
+  ...p,
+  type: 'rent',
+  state: p.status === 'paid' ? 'settled' : 'recorded',
+  amount_cents: Math.round((p.amount || 0) * 100),
+  period: (p.due_date || '').slice(0, 8) + '01',
+})
+const _demoPaymentsRaw = [
   // Current month
   {
     id: 'pay-cm-1', user_id: 'demo-user-id', property_id: P1, unit_id: U1A, tenant_id: T1, lease_id: 'lease-1',
@@ -172,6 +181,7 @@ export const demoPayments = [
     properties: { name: 'Riverside Condo', city: 'Denver', state: 'CO' },
   },
 ]
+export const demoPayments = _demoPaymentsRaw.map(_mkLedger)
 
 // ── Leases  (active ones end next year so the demo always looks current)
 const nextYr = yr + 1

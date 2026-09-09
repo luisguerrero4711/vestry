@@ -4,8 +4,14 @@
 // Everything in here is defensive: pass partial / empty arrays freely.
 // ─────────────────────────────────────────────
 
+import { rowCents, fromCents } from './money'
+
 const arr = (x) => (Array.isArray(x) ? x : [])
 const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0)
+
+// A payment row counts toward "rent" money unless it's tagged as a deposit
+// or an imported opening balance (which are recordkeeping, not rent income).
+const isRent = (p) => !p.type || p.type === 'rent' || p.type === 'fee'
 
 // Parse a date value as LOCAL time. Bare 'YYYY-MM-DD' strings parse as UTC
 // midnight otherwise, which lands on the previous day in western timezones.
@@ -134,21 +140,24 @@ const sameMonth = (dateStr, ref = new Date()) => {
 }
 
 export function collectedThisMonth(payments) {
-  return arr(payments)
-    .filter((p) => p.status === 'paid' && sameMonth(p.paid_date))
-    .reduce((s, p) => s + num(p.amount), 0)
+  const cents = arr(payments)
+    .filter((p) => p.status === 'paid' && p.state !== 'reversed' && isRent(p) && sameMonth(p.paid_date))
+    .reduce((s, p) => s + rowCents(p), 0)
+  return fromCents(cents)
 }
 
 export function outstanding(payments) {
-  return arr(payments)
-    .filter((p) => p.status === 'due' || p.status === 'overdue' || p.status === 'partial')
-    .reduce((s, p) => s + num(p.amount), 0)
+  const cents = arr(payments)
+    .filter((p) => (p.status === 'due' || p.status === 'overdue' || p.status === 'partial') && p.state !== 'reversed')
+    .reduce((s, p) => s + rowCents(p), 0)
+  return fromCents(cents)
 }
 
 export function expensesThisMonth(expenses) {
-  return arr(expenses)
+  const cents = arr(expenses)
     .filter((e) => sameMonth(e.date))
-    .reduce((s, e) => s + num(e.amount), 0)
+    .reduce((s, e) => s + Math.round(num(e.amount) * 100), 0)
+  return fromCents(cents)
 }
 
 /** on-time rate = paid-on-or-before-due / all resolved, this + last few months */
@@ -165,10 +174,10 @@ export function monthlyCollected(payments, n = 6) {
   const ref = new Date()
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1)
-    const amount = arr(payments)
-      .filter((p) => p.status === 'paid' && sameMonth(p.paid_date, d))
-      .reduce((s, p) => s + num(p.amount), 0)
-    out.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), amount })
+    const cents = arr(payments)
+      .filter((p) => p.status === 'paid' && p.state !== 'reversed' && isRent(p) && sameMonth(p.paid_date, d))
+      .reduce((s, p) => s + rowCents(p), 0)
+    out.push({ label: d.toLocaleDateString('en-US', { month: 'short' }), amount: fromCents(cents) })
   }
   return out
 }

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { insertTolerant } from '../lib/db'
 import { useAuth } from '../hooks/useAuth'
-import { isDemoUser, demoProperties, demoTenants } from '../lib/demoData'
+import { isDemoUser, demoProperties, demoTenants, demoLeases } from '../lib/demoData'
+import { toCents } from '../lib/money'
 import { VT, VIcon } from '../lib/vestry-shared'
 
 const inp = {
@@ -27,9 +29,11 @@ export default function NewLeaseModal({ initialUnitId, onClose, onAdded }) {
   const [properties, setProperties] = useState([])
   const [units, setUnits] = useState([])
   const [tenants, setTenants] = useState([])
+  const [activeLeases, setActiveLeases] = useState([])
   const [form, setForm] = useState({
     property_id: '', unit_id: initialUnitId || '', tenant_id: '',
-    start_date: '', end_date: '', monthly_rent: '', security_deposit: '', notes: '',
+    start_date: '', end_date: '', monthly_rent: '', security_deposit: '',
+    opening_balance: '', opening_balance_date: '', notes: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -41,14 +45,16 @@ export default function NewLeaseModal({ initialUnitId, onClose, onAdded }) {
         setProperties(demoProperties.map(p => ({ id: p.id, name: p.name })))
         setUnits(demoProperties.flatMap(p => (p.units || []).map(u => ({ id: u.id, property_id: p.id, unit_number: u.unit_number, rent_amount: u.rent_amount }))))
         setTenants(demoTenants.map(t => ({ id: t.id, first_name: t.first_name, last_name: t.last_name })))
+        setActiveLeases(demoLeases.filter(l => (l.status ?? 'active') === 'active'))
         return
       }
-      const [{ data: p }, { data: u }, { data: t }] = await Promise.all([
+      const [{ data: p }, { data: u }, { data: t }, { data: al }] = await Promise.all([
         supabase.from('properties').select('id, name').eq('user_id', user.id).order('name'),
         supabase.from('units').select('id, property_id, unit_number, rent_amount'),
         supabase.from('tenants').select('id, first_name, last_name').eq('user_id', user.id).order('first_name'),
+        supabase.from('leases').select('id, unit_id, tenants(first_name,last_name)').eq('user_id', user.id).eq('status', 'active'),
       ])
-      setProperties(p || []); setUnits(u || []); setTenants(t || [])
+      setProperties(p || []); setUnits(u || []); setTenants(t || []); setActiveLeases(al || [])
     }
     load()
   }, [user, demo])
@@ -69,10 +75,21 @@ export default function NewLeaseModal({ initialUnitId, onClose, onAdded }) {
     }))
   }
 
+  // an active lease already on this unit? (server also enforces this)
+  const unitConflict = useMemo(() => {
+    if (!form.unit_id) return null
+    return activeLeases.find(l => l.unit_id === form.unit_id) || null
+  }, [activeLeases, form.unit_id])
+
   const handleSubmit = async e => {
     e.preventDefault()
     if (!form.property_id || !form.tenant_id || !form.start_date || !form.monthly_rent) {
       setError('Property, tenant, start date and rent are required.'); return
+    }
+    if (unitConflict) {
+      const who = unitConflict.tenants ? `${unitConflict.tenants.first_name} ${unitConflict.tenants.last_name}`.trim() : 'another tenant'
+      setError(`That unit already has an active lease with ${who}. End it first, or pick another unit.`)
+      return
     }
     setSaving(true); setError('')
 
@@ -84,6 +101,8 @@ export default function NewLeaseModal({ initialUnitId, onClose, onAdded }) {
       end_date: form.end_date || plusYear(form.start_date),
       monthly_rent: Number(form.monthly_rent),
       security_deposit: form.security_deposit === '' ? null : Number(form.security_deposit),
+      opening_balance_cents: form.opening_balance === '' ? 0 : toCents(form.opening_balance),
+      opening_balance_date: form.opening_balance_date || null,
       status: 'active',
       notes: form.notes.trim() || null,
     }
@@ -101,13 +120,18 @@ export default function NewLeaseModal({ initialUnitId, onClose, onAdded }) {
       onClose(); return
     }
 
-    const { data, error: err } = await supabase
-      .from('leases')
-      .insert([{ user_id: user.id, ...base }])
-      .select('*, tenants(first_name, last_name), properties(name), units(unit_number)')
-      .single()
+    const { data: ins, error: err } = await insertTolerant(
+      'leases', { user_id: user.id, ...base },
+      '*, tenants(first_name, last_name), properties(name), units(unit_number)'
+    )
     setSaving(false)
-    if (err) { setError(err.message); return }
+    if (err) {
+      setError(/already has an active lease/i.test(err.message)
+        ? 'That unit already has an active lease. End it first, or pick another unit.'
+        : err.message)
+      return
+    }
+    const data = Array.isArray(ins) ? ins[0] : ins
 
     // keep the tenant's placement in sync with the lease
     if (form.unit_id) {
@@ -150,6 +174,11 @@ export default function NewLeaseModal({ initialUnitId, onClose, onAdded }) {
               <option value="">— Whole property / no unit —</option>
               {unitsForProp.map(u => <option key={u.id} value={u.id}>Unit {u.unit_number}</option>)}
             </select>
+            {unitConflict && (
+              <div style={{ fontSize: 12, color: VT.amber, fontWeight: 600, marginTop: 6 }}>
+                This unit already has an active lease.
+              </div>
+            )}
           </div>
           <div>
             <label style={lbl}>Tenant *</label>
@@ -165,6 +194,16 @@ export default function NewLeaseModal({ initialUnitId, onClose, onAdded }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div><label style={lbl}>Monthly rent ($) *</label><input style={inp} type="number" min={0} value={form.monthly_rent} onChange={e => set('monthly_rent', e.target.value)} /></div>
             <div><label style={lbl}>Security deposit ($)</label><input style={inp} type="number" min={0} value={form.security_deposit} onChange={e => set('security_deposit', e.target.value)} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={lbl}>Opening balance ($)</label>
+              <input style={inp} type="number" value={form.opening_balance} onChange={e => set('opening_balance', e.target.value)} placeholder="carried-over amount owed" />
+            </div>
+            <div>
+              <label style={lbl}>As of</label>
+              <input style={inp} type="date" value={form.opening_balance_date} onChange={e => set('opening_balance_date', e.target.value)} />
+            </div>
           </div>
           <div>
             <label style={lbl}>Notes</label>

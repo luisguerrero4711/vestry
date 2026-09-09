@@ -489,6 +489,101 @@ select
 from properties p;
 
 -- ============================================================
+-- LEDGER & LAUNCH-HARDENING ADDITIONS
+-- Append-only, idempotent, additive. Nothing here drops or rewrites
+-- existing data. Mirrors the launch-spec money rules (exact cents,
+-- one charge per period, traceable reversals, deposits separate) and
+-- server-side occupancy-conflict rejection. Safe to re-run.
+-- ============================================================
+
+-- ── money in exact integer cents, alongside the existing numeric column ──
+alter table rent_payments add column if not exists amount_cents bigint;
+update rent_payments
+  set amount_cents = round(amount * 100)::bigint
+  where amount_cents is null and amount is not null;
+
+-- ── charge classification + money lifecycle ──
+alter table rent_payments add column if not exists type            text default 'rent';
+  -- rent | deposit | fee | credit | opening_balance
+alter table rent_payments add column if not exists state           text;
+  -- recorded | processing | settled | failed | reversed  (money lifecycle; `status` stays the period-coverage view)
+alter table rent_payments add column if not exists period          date;
+  -- first of the month a generated rent charge covers
+alter table rent_payments add column if not exists payer_tenant_id uuid references tenants(id) on delete set null;
+
+-- exactly one generated rent charge per lease per period
+create unique index if not exists rent_payments_lease_period_uniq
+  on rent_payments (lease_id, period, type)
+  where lease_id is not null and period is not null;
+
+-- ── payment audit trail: posted money records are never silently deleted ──
+create table if not exists payment_events (
+  id              uuid primary key default uuid_generate_v4(),
+  user_id         uuid references auth.users(id) on delete set null,   -- null for system/webhook events
+  rent_payment_id uuid references rent_payments(id) on delete set null,
+  lease_id        uuid references leases(id) on delete set null,
+  kind            text not null,           -- recorded | adjusted | reversed | refunded | note
+  amount_cents    bigint,
+  reason          text,
+  created_at      timestamptz default now()
+);
+create index if not exists payment_events_payment_idx on payment_events(rent_payment_id);
+create index if not exists payment_events_lease_idx   on payment_events(lease_id);
+alter table payment_events enable row level security;
+-- visible to whoever owns the underlying payment (or the event's own user_id)
+drop policy if exists "payment_events: owner full access" on payment_events;
+drop policy if exists "payment_events: via payment owner" on payment_events;
+create policy "payment_events: via payment owner"
+  on payment_events for all
+  using (
+    auth.uid() = user_id
+    or exists (select 1 from rent_payments rp where rp.id = payment_events.rent_payment_id and rp.user_id = auth.uid())
+  )
+  with check (
+    auth.uid() = user_id
+    or exists (select 1 from rent_payments rp where rp.id = payment_events.rent_payment_id and rp.user_id = auth.uid())
+  );
+
+-- ── opening balances on a lease ──
+alter table leases add column if not exists opening_balance_cents bigint default 0;
+alter table leases add column if not exists opening_balance_date  date;
+
+-- ── lease-end reminder schedule: default 60 and 30 days before end date ──
+alter table leases add column if not exists end_reminder_days int[] default '{60,30}';
+create table if not exists reminder_sends (
+  id          uuid primary key default uuid_generate_v4(),
+  lease_id    uuid references leases(id) on delete cascade not null,
+  kind        text not null,               -- rent_due | lease_end
+  key         text not null,               -- e.g. '2026-11-01' or 'end-60'
+  sent_at     timestamptz default now(),
+  unique (lease_id, kind, key)
+);
+
+-- ── occupancy-conflict rejection (server-side, trigger — safe on existing data) ──
+create or replace function check_unit_occupancy()
+returns trigger as $$
+begin
+  if new.status = 'active' and new.unit_id is not null then
+    if exists (
+      select 1 from leases l
+      where l.unit_id = new.unit_id
+        and l.status = 'active'
+        and l.id <> new.id
+    ) then
+      raise exception 'Unit % already has an active lease', new.unit_id
+        using errcode = 'unique_violation';
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists leases_unit_occupancy on leases;
+create trigger leases_unit_occupancy
+  before insert or update on leases
+  for each row execute function check_unit_occupancy();
+
+-- ============================================================
 -- DONE. Next: Dashboard → Authentication → Providers → Google
 -- (enable + paste Client ID/Secret), then Authentication → URL
 -- Configuration → add redirect URLs:

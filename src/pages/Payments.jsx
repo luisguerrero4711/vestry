@@ -8,8 +8,11 @@ import { VT, VIcon, VPill, VAvatar } from '../lib/vestry-shared'
 import {
   collectedThisMonth, outstanding, expensesThisMonth, onTimeRate, monthlyCollected,
 } from '../lib/derive'
+import { rowCents, fmtCents } from '../lib/money'
 import RecordPaymentModal from '../components/RecordPaymentModal'
 import RequestPaymentModal from '../components/RequestPaymentModal'
+import GenerateRentModal from '../components/GenerateRentModal'
+import VoidPaymentModal from '../components/VoidPaymentModal'
 import UpgradeGate from '../components/UpgradeGate'
 
 const money = (n) => `$${Number(n || 0).toLocaleString()}`
@@ -50,7 +53,9 @@ export default function Payments() {
   const [expenses, setExpenses] = useState([])
   const [loading, setLoading] = useState(true)
   const [showPayModal, setShowPayModal] = useState(false)
+  const [showGenerate, setShowGenerate] = useState(false)
   const [requestRow, setRequestRow] = useState(null)
+  const [voidRow, setVoidRow] = useState(null)
   const [filter, setFilter] = useState('all')
   const [toast, setToast] = useState('')
 
@@ -107,11 +112,24 @@ export default function Payments() {
       {showPayModal && (
         <RecordPaymentModal onClose={() => setShowPayModal(false)} onAdded={(row) => setPayments(prev => [row, ...prev])} />
       )}
+      {showGenerate && (
+        <GenerateRentModal
+          onClose={() => setShowGenerate(false)}
+          onGenerated={(rows) => { setPayments(prev => [...rows, ...prev]); setToast(`Generated ${rows.length} rent ${rows.length === 1 ? 'charge' : 'charges'}.`); setTimeout(() => setToast(''), 4000) }}
+        />
+      )}
       {requestRow && (
         <RequestPaymentModal
           payment={requestRow}
           onClose={() => setRequestRow(null)}
           onLinked={(id, url) => patch(id, { payment_link: url })}
+        />
+      )}
+      {voidRow && (
+        <VoidPaymentModal
+          payment={voidRow}
+          onClose={() => setVoidRow(null)}
+          onVoided={(id, fields) => { patch(id, fields); setToast('Payment reversed.'); setTimeout(() => setToast(''), 4000) }}
         />
       )}
       <div className="v-page">
@@ -123,11 +141,18 @@ export default function Payments() {
             <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500, marginBottom: 4 }}>Rent collection · this month</div>
             <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Payments</h1>
           </div>
-          <button onClick={() => setShowPayModal(true)} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-            background: VT.brand, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            color: '#fff', cursor: 'pointer', boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
-          }}><VIcon.Plus s={14} c="#fff" /> Record payment</button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => setShowGenerate(true)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+              background: VT.card, border: `1px solid ${VT.line}`, borderRadius: 8, fontSize: 13, fontWeight: 600,
+              color: VT.text1, cursor: 'pointer',
+            }}><VIcon.Calendar s={14} /> Generate rent</button>
+            <button onClick={() => setShowPayModal(true)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+              background: VT.brand, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              color: '#fff', cursor: 'pointer', boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+            }}><VIcon.Plus s={14} c="#fff" /> Record payment</button>
+          </div>
         </div>
 
         {/* Hero */}
@@ -191,11 +216,13 @@ export default function Payments() {
                 <tbody>
                   {rows.map((p) => {
                     const name = p.tenants ? `${p.tenants.first_name || ''} ${p.tenants.last_name || ''}`.trim() : '—'
-                    const st = STATUS[p.status] || { tone: 'neutral', label: p.status || '—' }
+                    const reversed = p.state === 'reversed'
+                    const st = reversed ? { tone: 'neutral', label: 'Reversed' } : (STATUS[p.status] || { tone: 'neutral', label: p.status || '—' })
                     const dt = p.paid_date || p.due_date
-                    const canRequest = (p.status === 'due' || p.status === 'overdue') && p.tenant_id
+                    const canRequest = !reversed && (p.status === 'due' || p.status === 'overdue') && p.tenant_id
+                    const canVoid = !reversed && p.status === 'paid'
                     return (
-                      <tr key={p.id} style={{ borderTop: `1px solid ${VT.line}` }}>
+                      <tr key={p.id} style={{ borderTop: `1px solid ${VT.line}`, opacity: reversed ? 0.55 : 1 }}>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>
                           {dt ? new Date(dt + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                         </td>
@@ -206,7 +233,7 @@ export default function Payments() {
                           </div>
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>{p.properties?.name || '—'}</td>
-                        <td style={{ padding: '14px 16px', fontFamily: VT.fontNum, fontSize: 15, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', color: p.status === 'overdue' ? VT.red : VT.text1 }}>{money(p.amount)}</td>
+                        <td style={{ padding: '14px 16px', fontFamily: VT.fontNum, fontSize: 15, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', color: p.status === 'overdue' && !reversed ? VT.red : VT.text1, textDecoration: reversed ? 'line-through' : 'none' }}>{fmtCents(rowCents(p))}</td>
                         <td style={{ padding: '14px 16px', fontSize: 13, color: VT.text2, fontWeight: 500 }}>{METHOD_LABELS[p.payment_method] || p.payment_method || '—'}</td>
                         <td style={{ padding: '14px 16px' }}><VPill tone={st.tone}>{st.label}</VPill></td>
                         <td style={{ padding: '14px 12px', textAlign: 'right' }}>
@@ -219,6 +246,11 @@ export default function Payments() {
                                 {p.payment_link ? 'Link ready' : 'Request'}
                               </button>
                             </UpgradeGate>
+                          )}
+                          {canVoid && (
+                            <button onClick={() => setVoidRow(p)} style={{ padding: '5px 10px', background: 'transparent', color: VT.text3, border: `1px solid ${VT.line}`, borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                              Void
+                            </button>
                           )}
                         </td>
                       </tr>

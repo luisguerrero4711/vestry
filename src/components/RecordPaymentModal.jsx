@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { insertTolerant } from '../lib/db'
 import { useAuth } from '../hooks/useAuth'
 import { isDemoUser, demoProperties, demoTenants, demoLeases } from '../lib/demoData'
 import { activeLeaseForTenant } from '../lib/derive'
+import { toCents } from '../lib/money'
 import { VT, VIcon } from '../lib/vestry-shared'
 
 const inp = {
@@ -102,29 +104,29 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
     // so reminders, autopay and the lease ledger have what they need.
     const lease = activeLeaseForTenant(form.tenant_id, leases)
 
-    const { data, error: err } = await supabase
-      .from('rent_payments')
-      .insert([{
-        user_id: user.id,
-        property_id: form.property_id,
-        tenant_id: form.tenant_id || null,
-        lease_id: lease?.id || null,
-        unit_id: lease?.unit_id || null,
-        room_id: lease?.room_id || null,
-        amount: Number(form.amount),
-        due_date: form.due_date,
-        paid_date: form.status === 'paid' ? form.paid_date : null,
-        payment_method: form.payment_method,
-        status: form.status,  // paid | due | overdue | partial
-        notes: form.notes.trim() || null,
-      }])
-      .select('*, properties(name), tenants(first_name, last_name)')
-      .single()
+    const { data, error: err } = await insertTolerant('rent_payments', {
+      user_id: user.id,
+      property_id: form.property_id,
+      tenant_id: form.tenant_id || null,
+      payer_tenant_id: form.tenant_id || null,
+      lease_id: lease?.id || null,
+      unit_id: lease?.unit_id || null,
+      room_id: lease?.room_id || null,
+      type: 'rent',
+      amount: Number(form.amount),
+      amount_cents: toCents(form.amount),
+      due_date: form.due_date,
+      paid_date: form.status === 'paid' ? form.paid_date : null,
+      payment_method: form.payment_method,
+      status: form.status,  // paid | due | overdue | partial
+      state: form.status === 'paid' ? 'settled' : 'recorded',
+      notes: form.notes.trim() || null,
+    }, '*, properties(name), tenants(first_name, last_name)')
 
     setSaving(false)
     if (err) { setError(err.message); return }
 
-    onAdded?.(data)   // raw rent_payments row (+ properties/tenants joins)
+    onAdded?.(Array.isArray(data) ? data[0] : data)   // raw rent_payments row (+ joins)
     onClose()
   }
 
