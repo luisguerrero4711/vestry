@@ -160,7 +160,7 @@ export default function Dashboard() {
     if (isDemoUser(user)) {
       setDashData({
         collected: 2650, outstanding: 1800, expenses: 725, net: 1925,
-        collectionPct: 60, paidCount: 2, totalCount: 3,
+        collectionPct: 60, paidCount: 2, totalCount: 3, openRepairs: 2,
         overdue: [{ name: "Priya Patel", prop: "Riverside Condo", amount: 1800, days: 2 }],
         recent: [
           { init: 'SC', color: '#FF6B6B', name: 'Sarah Chen',      prop: 'Oak Street Duplex · Unit A', amount: 1450, status: 'paid',    label: 'Paid May 1',    method: 'Bank transfer' },
@@ -187,6 +187,7 @@ export default function Dashboard() {
         { data: expenseData },
         { data: recentData },
         { data: activeLeases },
+        { data: openRepairsData },
       ] = await Promise.all([
         // Paid this month
         supabase.from('rent_payments')
@@ -217,6 +218,11 @@ export default function Dashboard() {
           .select('id')
           .eq('user_id', user.id)
           .eq('status', 'active'),
+        // Open maintenance requests
+        supabase.from('maintenance_requests')
+          .select('id')
+          .eq('user_id', user.id)
+          .neq('status', 'resolved'),
       ])
 
       const collected = (paidData || []).reduce((s, p) => s + Number(p.amount || 0), 0)
@@ -255,6 +261,7 @@ export default function Dashboard() {
       setDashData({
         collected, outstanding, expenses, net,
         collectionPct, paidCount, totalCount: total,
+        openRepairs: (openRepairsData || []).length,
         overdue, recent,
         netChartData: [net, net, net, net, net, net], // placeholder until multi-month data
         netChartMonths: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
@@ -280,7 +287,7 @@ export default function Dashboard() {
     )
   }
 
-  const { collected, outstanding, expenses, net, collectionPct, paidCount, totalCount, overdue, recent, netChartData, netChartMonths, netTotal } = dashData
+  const { collected, outstanding, expenses, net, collectionPct, paidCount, totalCount, overdue, recent, netChartData, netChartMonths, netTotal, openRepairs = 0 } = dashData
 
   return (
     <Layout>
@@ -349,6 +356,22 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Open maintenance */}
+        {openRepairs > 0 && (
+          <div onClick={() => navigate('/maintenance')} style={{
+            background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard,
+            padding: 16, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+          }}>
+            <div style={{ width: 40, height: 40, borderRadius: 11, background: VT.amberTint, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <VIcon.Settings s={18} c="var(--amber)" />
+            </div>
+            <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>
+              {openRepairs} open maintenance {openRepairs === 1 ? 'request' : 'requests'}
+            </div>
+            <VIcon.Chevron s={16} c="var(--text-3)" />
+          </div>
+        )}
 
         {/* Overdue alerts */}
         {overdue.length > 0 && overdue.map((od, i) => (

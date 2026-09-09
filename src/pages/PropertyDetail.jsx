@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
-import { isDemoUser, demoProperties, demoTenants, demoLeases, demoPayments, demoExpenses } from '../lib/demoData'
+import { isDemoUser, demoProperties, demoTenants, demoLeases, demoPayments, demoExpenses, demoRequests } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
 import {
   computeOccupancy, scheduledRent, activeLeaseForUnit,
@@ -11,6 +11,7 @@ import {
 } from '../lib/derive'
 import UnitsEditor from '../components/UnitsEditor'
 import RoomsEditor from '../components/RoomsEditor'
+import NewRequestModal from '../components/NewRequestModal'
 
 const money = (n) => `$${Number(n || 0).toLocaleString()}`
 const initials = (s = '') => s.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
@@ -27,10 +28,12 @@ export default function PropertyDetail() {
   const [leases, setLeases] = useState([])
   const [payments, setPayments] = useState([])
   const [expenses, setExpenses] = useState([])
+  const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
   const [unitModal, setUnitModal] = useState(null)   // { unit } | 'new'
   const [roomModal, setRoomModal] = useState(null)   // { unitId, room } | { unitId }
+  const [showRequest, setShowRequest] = useState(false)
 
   const demo = isDemoUser(user)
 
@@ -46,17 +49,19 @@ export default function PropertyDetail() {
       setLeases(demoLeases.filter(l => l.property_id === id))
       setPayments(demoPayments.filter(x => x.property_id === id))
       setExpenses(demoExpenses.filter(x => x.property_id === id))
+      setRequests(demoRequests.filter(x => x.property_id === id))
       setLoading(false)
       return
     }
 
-    const [{ data: p }, { data: u }, { data: t }, { data: l }, { data: pay }, { data: exp }] = await Promise.all([
+    const [{ data: p }, { data: u }, { data: t }, { data: l }, { data: pay }, { data: exp }, { data: req }] = await Promise.all([
       supabase.from('properties').select('*').eq('id', id).eq('user_id', user.id).single(),
       supabase.from('units').select('*, rooms(*)').eq('property_id', id).order('unit_number'),
       supabase.from('tenants').select('*').eq('user_id', user.id).eq('property_id', id),
       supabase.from('leases').select('*, tenants(first_name, last_name)').eq('user_id', user.id).eq('property_id', id),
-      supabase.from('rent_payments').select('amount, status, paid_date').eq('user_id', user.id).eq('property_id', id),
+      supabase.from('rent_payments').select('amount, amount_cents, type, state, status, paid_date').eq('user_id', user.id).eq('property_id', id),
       supabase.from('expenses').select('amount, date').eq('user_id', user.id).eq('property_id', id),
+      supabase.from('maintenance_requests').select('id, title, status, priority').eq('user_id', user.id).eq('property_id', id).order('created_at', { ascending: false }),
     ])
     setProperty(p || null)
     setUnits((u || []).map(x => ({ ...x, rooms: x.rooms || [] })))
@@ -64,6 +69,7 @@ export default function PropertyDetail() {
     setLeases(l || [])
     setPayments(pay || [])
     setExpenses(exp || [])
+    setRequests(req || [])
     setLoading(false)
   }
 
@@ -155,6 +161,13 @@ export default function PropertyDetail() {
           room={roomModal.room || null}
           onClose={() => setRoomModal(null)}
           onSaved={(row) => onRoomSaved(roomModal.unitId, row)}
+        />
+      )}
+      {showRequest && (
+        <NewRequestModal
+          initialPropertyId={id}
+          onClose={() => setShowRequest(false)}
+          onAdded={(r) => setRequests(prev => [r, ...prev])}
         />
       )}
 
@@ -292,6 +305,31 @@ export default function PropertyDetail() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </VSection>
+
+        <div style={{ height: 16 }} />
+        <VSection
+          title="Maintenance"
+          subtitle={`${requests.filter(r => r.status !== 'resolved').length} open`}
+          action={<button onClick={() => setShowRequest(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: VT.brand, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}><VIcon.Plus s={12} c="var(--brand)" /> Log a repair</button>}
+        >
+          {requests.length === 0 ? (
+            <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500 }}>No maintenance requests for this property.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {requests.map(r => (
+                <Link key={r.id} to={`/maintenance/${r.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 0', borderTop: `1px solid ${VT.line}`, textDecoration: 'none' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: r.status === 'resolved' ? VT.text3 : VT.text1 }}>{r.title}</span>
+                  <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {r.priority === 'urgent' && r.status !== 'resolved' && <VPill tone="danger">Urgent</VPill>}
+                    <VPill tone={r.status === 'resolved' ? 'success' : r.status === 'new' ? 'brand' : 'warn'}>
+                      {r.status === 'in_progress' ? 'In progress' : (r.status || 'new')[0].toUpperCase() + (r.status || 'new').slice(1)}
+                    </VPill>
+                  </span>
+                </Link>
+              ))}
             </div>
           )}
         </VSection>

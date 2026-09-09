@@ -10,8 +10,8 @@ const inp = {
 }
 const lbl = { fontSize: 11, fontWeight: 600, color: VT.text3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'block' }
 
-/** props: onClose, onAdded(row) */
-export default function NewRequestModal({ onClose, onAdded }) {
+/** props: onClose, onAdded(row), initialPropertyId */
+export default function NewRequestModal({ onClose, onAdded, initialPropertyId }) {
   const { user } = useAuth()
   const demo = isDemoUser(user)
   const [properties, setProperties] = useState([])
@@ -19,7 +19,7 @@ export default function NewRequestModal({ onClose, onAdded }) {
   const [rooms, setRooms] = useState([])
   const [tenants, setTenants] = useState([])
   const [form, setForm] = useState({
-    property_id: '', unit_id: '', room_id: '', tenant_id: '',
+    property_id: initialPropertyId || '', unit_id: '', room_id: '', tenant_id: '',
     title: '', description: '', priority: 'normal',
   })
   const [saving, setSaving] = useState(false)
