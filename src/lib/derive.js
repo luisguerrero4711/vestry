@@ -160,6 +160,30 @@ export function expensesThisMonth(expenses) {
   return fromCents(cents)
 }
 
+/**
+ * Money a lease still owes, in cents:
+ *   opening balance  +  unpaid/partial rent & fee charges  (reversed rows excluded).
+ * `payments` is the flat rent_payments array (filter to this lease's rows first,
+ * or pass all and give the lease id via `leaseId`).
+ */
+export function leaseBalanceCents(lease, payments, leaseId = lease?.id) {
+  const opening = Math.round(Number(lease?.opening_balance_cents) || 0)
+  const owed = arr(payments)
+    .filter((p) => p.lease_id === leaseId && isRent(p) && p.state !== 'reversed' &&
+      (p.status === 'due' || p.status === 'overdue' || p.status === 'partial'))
+    .reduce((s, p) => s + rowCents(p), 0)
+  return opening + owed
+}
+
+/** Deposit held on a lease, in cents (recorded deposit payments, else the lease field). */
+export function depositHeldCents(lease, payments, leaseId = lease?.id) {
+  const recorded = arr(payments)
+    .filter((p) => p.lease_id === leaseId && p.type === 'deposit' && p.status === 'paid' && p.state !== 'reversed')
+    .reduce((s, p) => s + rowCents(p), 0)
+  if (recorded) return recorded
+  return Math.round((Number(lease?.security_deposit) || 0) * 100)
+}
+
 /** on-time rate = paid-on-or-before-due / all resolved, this + last few months */
 export function onTimeRate(payments) {
   const resolved = arr(payments).filter((p) => p.status === 'paid' && p.paid_date && p.due_date)

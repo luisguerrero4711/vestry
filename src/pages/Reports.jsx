@@ -5,6 +5,11 @@ import Layout from '../components/Layout'
 import { isDemoUser, demoProperties, demoPayments, demoExpenses, demoLeases } from '../lib/demoData'
 import { VT, VSection } from '../lib/vestry-shared'
 import { computeOccupancy } from '../lib/derive'
+import { rowCents, fromCents } from '../lib/money'
+
+// rent income only: exclude deposits, imported opening balances, and reversed rows
+const rentOnly = (p) => (!p.type || p.type === 'rent' || p.type === 'fee') && p.state !== 'reversed'
+const sumRent = (list) => fromCents((list || []).filter(rentOnly).reduce((s, p) => s + rowCents(p), 0))
 
 const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -44,7 +49,7 @@ export default function Reports() {
   const filtPays = propFilter === 'all' ? payments : payments.filter(p => p.property_id === propFilter)
   const filtExps = propFilter === 'all' ? expenses : expenses.filter(e => e.property_id === propFilter)
 
-  const totalCollected = filtPays.reduce((s, p) => s + Number(p.amount), 0)
+  const totalCollected = sumRent(filtPays)
   const totalExpenses = filtExps.reduce((s, e) => s + Number(e.amount), 0)
   const netIncome = totalCollected - totalExpenses
 
@@ -55,13 +60,13 @@ export default function Reports() {
 
   const monthly = MONTHS.map((label, idx) => {
     const m = String(idx + 1).padStart(2, '0')
-    const collected = filtPays.filter(p => p.paid_date?.startsWith(`${year}-${m}`)).reduce((s, p) => s + Number(p.amount), 0)
+    const collected = sumRent(filtPays.filter(p => p.paid_date?.startsWith(`${year}-${m}`)))
     const expTotal = filtExps.filter(e => e.date?.startsWith(`${year}-${m}`)).reduce((s, e) => s + Number(e.amount), 0)
     return { label, collected, expenses: expTotal, net: collected - expTotal }
   })
 
   const perProperty = properties.map(prop => {
-    const collected = payments.filter(p => p.property_id === prop.id).reduce((s, p) => s + Number(p.amount), 0)
+    const collected = sumRent(payments.filter(p => p.property_id === prop.id))
     const expTotal = expenses.filter(e => e.property_id === prop.id).reduce((s, e) => s + Number(e.amount), 0)
     return { ...prop, collected, expenses: expTotal, net: collected - expTotal }
   })

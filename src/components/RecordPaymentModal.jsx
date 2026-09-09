@@ -26,7 +26,7 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
   const [tenants, setTenants] = useState([])
   const [leases, setLeases] = useState([])
   const [form, setForm] = useState({
-    property_id: '', tenant_id: '',
+    property_id: '', tenant_id: '', type: 'rent',
     amount: '', due_date: today, paid_date: today,
     payment_method: 'bank_transfer',
     status: 'paid', notes: '',
@@ -88,6 +88,7 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
         property_id: form.property_id,
         tenant_id: form.tenant_id || null,
         lease_id: null, unit_id: null, room_id: null,
+        type: form.type,
         amount: Number(form.amount),
         due_date: form.due_date,
         paid_date: (form.status === 'paid' || form.status === 'partial') ? form.paid_date : null,
@@ -112,7 +113,7 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
       lease_id: lease?.id || null,
       unit_id: lease?.unit_id || null,
       room_id: lease?.room_id || null,
-      type: 'rent',
+      type: form.type,
       amount: Number(form.amount),
       amount_cents: toCents(form.amount),
       due_date: form.due_date,
@@ -172,9 +173,20 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
+              <label style={lbl}>For</label>
+              <select style={{ ...inp, cursor: 'pointer' }} value={form.type} onChange={e => set('type', e.target.value)}>
+                <option value="rent">Rent</option>
+                <option value="deposit">Security deposit</option>
+                <option value="fee">Fee</option>
+                <option value="credit">Credit</option>
+              </select>
+            </div>
+            <div>
               <label style={lbl}>Amount *</label>
               <input style={inp} type="number" min={0.01} step={0.01} value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="1500.00" required />
             </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={lbl}>Status</label>
               <select style={{ ...inp, cursor: 'pointer' }} value={form.status} onChange={e => set('status', e.target.value)}>

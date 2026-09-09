@@ -5,9 +5,10 @@ import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import { isDemoUser, demoLeases, demoPayments } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
-import { leaseStatusTone, leaseStatusLabel } from '../lib/derive'
+import { leaseStatusTone, leaseStatusLabel, leaseBalanceCents, depositHeldCents } from '../lib/derive'
+import { fmtCents, rowCents, toCents } from '../lib/money'
 
-const money = (n) => `$${Number(n || 0).toLocaleString()}`
+const money = (n) => fmtCents(toCents(n))
 const initials = (s = '') => s.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
@@ -68,6 +69,7 @@ export default function LeaseDetail() {
     if (!lease.start_date || !lease.end_date) return 12
     return Math.max(1, Math.round((new Date(lease.end_date) - new Date(lease.start_date)) / (30.44 * 86400000)))
   })()
+  const balanceCents = leaseBalanceCents(lease, payments)
 
   return (
     <Layout>
@@ -126,17 +128,19 @@ export default function LeaseDetail() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
                 ['Monthly rent', money(lease.monthly_rent)],
-                ['Security deposit', money(lease.security_deposit)],
+                (lease.opening_balance_cents > 0) && ['Opening balance', fmtCents(lease.opening_balance_cents)],
+                ['Deposit held', fmtCents(depositHeldCents(lease, payments))],
                 ['Term length', termLength(lease.start_date, lease.end_date)],
-              ].map(([k, v]) => (
+                ['Lease value', fmtCents(toCents(Number(lease.monthly_rent || 0) * months))],
+              ].filter(Boolean).map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
                   <span style={{ fontSize: 12, color: VT.text3, fontWeight: 500 }}>{k}</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: VT.text1 }}>{v}</span>
                 </div>
               ))}
-              <div style={{ borderTop: `1px solid ${VT.line}`, paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>Lease value</span>
-                <span style={{ fontFamily: VT.fontNum, fontSize: 16, fontWeight: 600 }}>{money(Number(lease.monthly_rent || 0) * months)}</span>
+              <div style={{ borderTop: `1px solid ${VT.line}`, paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Balance due</span>
+                <span style={{ fontFamily: VT.fontNum, fontSize: 18, fontWeight: 600, color: balanceCents > 0 ? VT.red : VT.green }}>{fmtCents(balanceCents)}</span>
               </div>
             </div>
           </VSection>
@@ -152,17 +156,21 @@ export default function LeaseDetail() {
               <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500 }}>No payments recorded against this lease yet.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {payments.map(p => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 0', borderTop: `1px solid ${VT.line}` }}>
+                {payments.map(p => {
+                  const rev = p.state === 'reversed'
+                  const typeLabel = p.type && p.type !== 'rent' ? ` · ${p.type}` : ''
+                  return (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 0', borderTop: `1px solid ${VT.line}`, opacity: rev ? 0.55 : 1 }}>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{money(p.amount)}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, textDecoration: rev ? 'line-through' : 'none' }}>{fmtCents(rowCents(p))}{typeLabel}</div>
                       <div style={{ fontSize: 11, color: VT.text3, fontWeight: 500 }}>Due {fmtDate(p.due_date)}{p.paid_date ? ` · paid ${fmtDate(p.paid_date)}` : ''}</div>
                     </div>
-                    <VPill tone={p.status === 'paid' ? 'success' : p.status === 'overdue' ? 'danger' : 'warn'}>
-                      {(p.status || 'due')[0].toUpperCase() + (p.status || 'due').slice(1)}
+                    <VPill tone={rev ? 'neutral' : p.status === 'paid' ? 'success' : p.status === 'overdue' ? 'danger' : 'warn'}>
+                      {rev ? 'Reversed' : (p.status || 'due')[0].toUpperCase() + (p.status || 'due').slice(1)}
                     </VPill>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </VSection>
