@@ -56,7 +56,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const handleSignOut = async () => {
     await signOut()
-    navigate('/auth')
+    navigate('/')
   }
 
   const planColors = PLAN_COLORS[plan] ?? PLAN_COLORS.free

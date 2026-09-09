@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 
+import Landing        from './pages/Landing'
 import Auth           from './pages/Auth'
 import AuthCallback    from './pages/AuthCallback'
 import RoleSelection   from './pages/RoleSelection'
@@ -35,6 +36,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          <Route path="/"              element={<PublicRoute><Landing /></PublicRoute>} />
           <Route path="/auth"          element={<PublicRoute><Auth /></PublicRoute>} />
           {/* OAuth callback — no auth wrapper; Supabase establishes the session here */}
           <Route path="/auth/callback" element={<AuthCallback />} />
@@ -54,7 +56,7 @@ export default function App() {
           <Route path="/admin"      element={<PrivateRoute><Admin      /></PrivateRoute>} />
           <Route path="/settings"   element={<PrivateRoute><Settings   /></PrivateRoute>} />
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
