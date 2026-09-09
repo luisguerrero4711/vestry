@@ -267,5 +267,36 @@ export const demoExpenses = [
   },
 ]
 
+// ── Maintenance requests
+export const demoRequests = [
+  {
+    id: 'mr-1', user_id: 'demo-user-id', property_id: P1, unit_id: U1A, room_id: null, tenant_id: T1,
+    title: 'Leaking kitchen sink', description: 'Water pooling under the sink cabinet, worse in the evenings.',
+    status: 'in_progress', priority: 'urgent', vendor: 'CoolAir Services', cost_cents: null,
+    created_at: `${yr}-${cm}-06`,
+    properties: { name: 'Oak Street Duplex' }, units: { unit_number: 'A' }, tenants: { first_name: 'Sarah', last_name: 'Chen' },
+  },
+  {
+    id: 'mr-2', user_id: 'demo-user-id', property_id: P2, unit_id: U2, room_id: null, tenant_id: T3,
+    title: 'HVAC not cooling', description: 'Thermostat set to 68 but the unit stays around 78.',
+    status: 'new', priority: 'high', vendor: null, cost_cents: null,
+    created_at: `${yr}-${cm}-09`,
+    properties: { name: 'Riverside Condo' }, units: { unit_number: '1' }, tenants: { first_name: 'Priya', last_name: 'Patel' },
+  },
+  {
+    id: 'mr-3', user_id: 'demo-user-id', property_id: P1, unit_id: U1B, room_id: null, tenant_id: T2,
+    title: 'Replace smoke detector battery', description: 'Chirping every few minutes.',
+    status: 'resolved', priority: 'low', vendor: null, cost_cents: 1200,
+    created_at: `${lmYr}-${lm}-18`,
+    properties: { name: 'Oak Street Duplex' }, units: { unit_number: 'B' }, tenants: { first_name: 'Marcus', last_name: 'Williams' },
+  },
+]
+export const demoRequestComments = {
+  'mr-1': [
+    { id: 'mc-1', body: 'Acknowledged — sending a plumber Thursday.', internal: false, created_at: `${yr}-${cm}-06` },
+    { id: 'mc-2', body: 'Vendor quoted $180. Approved.', internal: true, created_at: `${yr}-${cm}-07` },
+  ],
+}
+
 // ── Helper
 export const isDemoUser = (user) => user?.id === 'demo-user-id'

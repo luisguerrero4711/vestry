@@ -14,6 +14,8 @@ import Payments        from './pages/Payments'
 import Leases          from './pages/Leases'
 import LeaseDetail     from './pages/LeaseDetail'
 import Expenses        from './pages/Expenses'
+import Maintenance      from './pages/Maintenance'
+import MaintenanceDetail from './pages/MaintenanceDetail'
 import Reports         from './pages/Reports'
 import Pricing         from './pages/Pricing'
 import Admin           from './pages/Admin'
@@ -50,7 +52,9 @@ export default function App() {
           <Route path="/payments"       element={<PrivateRoute><Payments       /></PrivateRoute>} />
           <Route path="/leases"         element={<PrivateRoute><Leases         /></PrivateRoute>} />
           <Route path="/leases/:id"     element={<PrivateRoute><LeaseDetail    /></PrivateRoute>} />
-          <Route path="/expenses"   element={<PrivateRoute><Expenses   /></PrivateRoute>} />
+          <Route path="/expenses"         element={<PrivateRoute><Expenses          /></PrivateRoute>} />
+          <Route path="/maintenance"      element={<PrivateRoute><Maintenance       /></PrivateRoute>} />
+          <Route path="/maintenance/:id"  element={<PrivateRoute><MaintenanceDetail /></PrivateRoute>} />
           <Route path="/reports"    element={<PrivateRoute><Reports    /></PrivateRoute>} />
           <Route path="/pricing"    element={<PrivateRoute><Pricing    /></PrivateRoute>} />
           <Route path="/admin"      element={<PrivateRoute><Admin      /></PrivateRoute>} />

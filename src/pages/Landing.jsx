@@ -156,8 +156,9 @@ export default function Landing() {
           {[
             ['House', 'Properties & units', 'Every building and unit, with occupancy derived from real leases.'],
             ['Person', 'Rooms & tenants', 'Assign a tenant to a room and see exactly who lives where.'],
-            ['Doc', 'Leases', 'Draft, active, and expiring leases — terms, dates, and documents in one place.'],
-            ['Dollar', 'Rent tracking', 'Log every payment, see what’s outstanding, and watch your on-time rate.'],
+            ['Doc', 'Leases', 'Draft, active, and expiring leases — end or renew them without double-charging anyone.'],
+            ['Dollar', 'Rent ledger', 'Generate monthly rent, log payments in exact cents, reverse mistakes with a full audit trail.'],
+            ['Settings', 'Maintenance', 'Track repairs by unit or room — priority, vendor, cost, and updates, with private notes.'],
           ].map(([icon, title, body]) => {
             const Icon = VIcon[icon]
             return (
@@ -174,7 +175,7 @@ export default function Landing() {
           })}
         </div>
         <p style={{ fontSize: 13, color: MUTED, marginTop: 28 }}>
-          Coming next: maintenance requests, a tenant portal, and online rent collection.
+          Coming next: a tenant portal and online rent collection.
         </p>
       </div>
 

@@ -583,6 +583,51 @@ create trigger leases_unit_occupancy
   before insert or update on leases
   for each row execute function check_unit_occupancy();
 
+-- ── maintenance requests (landlord-facing at launch; tenant intake is Phase 2) ──
+create table if not exists maintenance_requests (
+  id           uuid primary key default uuid_generate_v4(),
+  user_id      uuid references auth.users(id) on delete cascade not null,
+  property_id  uuid references properties(id) on delete cascade not null,
+  unit_id      uuid references units(id) on delete set null,
+  room_id      uuid references rooms(id) on delete set null,
+  tenant_id    uuid references tenants(id) on delete set null,
+  title        text not null,
+  description  text,
+  status       text default 'new',      -- new | acknowledged | in_progress | waiting | resolved
+  priority     text default 'normal',   -- low | normal | high | urgent
+  vendor       text,
+  cost_cents   bigint,
+  photos       text[],
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+create index if not exists mr_property_idx on maintenance_requests(property_id);
+create index if not exists mr_status_idx   on maintenance_requests(status);
+alter table maintenance_requests enable row level security;
+drop policy if exists "maintenance_requests: owner full access" on maintenance_requests;
+create policy "maintenance_requests: owner full access"
+  on maintenance_requests for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop trigger if exists mr_updated_at on maintenance_requests;
+create trigger mr_updated_at before update on maintenance_requests
+  for each row execute function update_updated_at();
+
+create table if not exists maintenance_comments (
+  id          uuid primary key default uuid_generate_v4(),
+  request_id  uuid references maintenance_requests(id) on delete cascade not null,
+  user_id     uuid references auth.users(id) on delete set null,
+  body        text not null,
+  internal    boolean default false,    -- landlord-only note vs tenant-visible update
+  created_at  timestamptz default now()
+);
+create index if not exists mc_request_idx on maintenance_comments(request_id);
+alter table maintenance_comments enable row level security;
+drop policy if exists "maintenance_comments: via request owner" on maintenance_comments;
+create policy "maintenance_comments: via request owner"
+  on maintenance_comments for all
+  using (exists (select 1 from maintenance_requests r where r.id = maintenance_comments.request_id and r.user_id = auth.uid()))
+  with check (exists (select 1 from maintenance_requests r where r.id = maintenance_comments.request_id and r.user_id = auth.uid()));
+
 -- ============================================================
 -- DONE. Next: Dashboard → Authentication → Providers → Google
 -- (enable + paste Client ID/Secret), then Authentication → URL

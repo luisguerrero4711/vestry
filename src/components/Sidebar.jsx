@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileText,
   Wrench,
+  Receipt,
   BarChart2,
   Table2,
   Zap,
@@ -29,10 +30,11 @@ const NAV = [
   {
     label: 'Finance',
     items: [
-      { to: '/leases',    Icon: FileText,  label: 'Leases'    },
-      { to: '/rent-roll', Icon: Table2,    label: 'Rent Roll' },
-      { to: '/expenses',  Icon: Wrench,    label: 'Expenses'  },
-      { to: '/reports',   Icon: BarChart2, label: 'Reports'   },
+      { to: '/leases',      Icon: FileText,  label: 'Leases'      },
+      { to: '/rent-roll',   Icon: Table2,    label: 'Rent Roll'   },
+      { to: '/maintenance', Icon: Wrench,    label: 'Maintenance' },
+      { to: '/expenses',    Icon: Receipt,   label: 'Expenses'    },
+      { to: '/reports',     Icon: BarChart2, label: 'Reports'     },
     ],
   },
   {
