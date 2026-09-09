@@ -7,6 +7,7 @@ import { isDemoUser, demoLeases, demoPayments } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
 import { leaseStatusTone, leaseStatusLabel, leaseBalanceCents, depositHeldCents } from '../lib/derive'
 import { fmtCents, rowCents, toCents } from '../lib/money'
+import EndLeaseModal from '../components/EndLeaseModal'
 
 const money = (n) => fmtCents(toCents(n))
 const initials = (s = '') => s.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
@@ -27,6 +28,7 @@ export default function LeaseDetail() {
   const [lease, setLease] = useState(null)
   const [landlord, setLandlord] = useState(null)
   const [payments, setPayments] = useState([])
+  const [showEnd, setShowEnd] = useState(false)
   const [loading, setLoading] = useState(true)
   const demo = isDemoUser(user)
 
@@ -73,6 +75,13 @@ export default function LeaseDetail() {
 
   return (
     <Layout>
+      {showEnd && (
+        <EndLeaseModal
+          lease={lease}
+          onClose={() => setShowEnd(false)}
+          onEnded={(fields) => setLease(l => ({ ...l, ...fields }))}
+        />
+      )}
       <div className="v-page">
         <Link to="/leases" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: VT.text3, fontWeight: 600, textDecoration: 'none', marginBottom: 12 }}>
           <VIcon.ChevronLeft s={13} c="var(--text-3)" /> Leases
@@ -95,6 +104,12 @@ export default function LeaseDetail() {
                 disabled={!lease.pdf_url}
                 style={{ flex: 1, padding: '8px', background: VT.tint, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: lease.pdf_url ? VT.text1 : VT.text3, cursor: lease.pdf_url ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               ><VIcon.Download s={13} /> {lease.pdf_url ? 'View PDF' : 'No PDF'}</button>
+              {(lease.status ?? 'active') === 'active' && (
+                <button
+                  onClick={() => setShowEnd(true)}
+                  style={{ flex: 1, padding: '8px', background: VT.redTint, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: VT.red, cursor: 'pointer' }}
+                >End lease</button>
+              )}
             </div>
           </div>
 
