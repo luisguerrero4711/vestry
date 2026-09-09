@@ -397,6 +397,98 @@ where id in (
 );
 
 -- ============================================================
+-- INFRA BUILD-OUT ADDITIONS  (append-only; every statement idempotent)
+-- Adds: rooms table + RLS, tenant→room link, future-proof room_id FKs,
+-- real properties.market_value, Phase-2 tenant auth bridge column,
+-- the 5 Stripe columns the Netlify functions already write, and a
+-- richer property_summary view. Safe to re-run.
+-- ============================================================
+
+-- ---------- rooms + hierarchy ----------------------
+create table if not exists rooms (
+  id           uuid primary key default uuid_generate_v4(),
+  unit_id      uuid references units(id) on delete cascade not null,
+  name         text not null default 'Room',
+  monthly_rent numeric(10,2),          -- nullable: room-level rent is future
+  size_sqft    int,
+  notes        text,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+create index if not exists rooms_unit_id_idx on rooms(unit_id);
+
+alter table rooms enable row level security;
+drop policy if exists "rooms: owner via property" on rooms;
+create policy "rooms: owner via property"
+  on rooms for all
+  using (exists (
+    select 1 from units u
+    join properties p on p.id = u.property_id
+    where u.id = rooms.unit_id and p.user_id = auth.uid()
+  ))
+  with check (exists (
+    select 1 from units u
+    join properties p on p.id = u.property_id
+    where u.id = rooms.unit_id and p.user_id = auth.uid()
+  ));
+
+drop trigger if exists rooms_updated_at on rooms;
+create trigger rooms_updated_at
+  before update on rooms
+  for each row execute function update_updated_at();
+
+-- tenant -> unit (exists) + tenant -> room (new)
+alter table tenants add column if not exists room_id uuid references rooms(id) on delete set null;
+create index if not exists tenants_unit_id_idx     on tenants(unit_id);
+create index if not exists tenants_room_id_idx     on tenants(room_id);
+create index if not exists tenants_property_id_idx on tenants(property_id);
+
+-- future-proofing: nullable room_id on leases / payments (UI stays unit-level)
+alter table leases        add column if not exists room_id uuid references rooms(id) on delete set null;
+alter table rent_payments add column if not exists room_id uuid references rooms(id) on delete set null;
+create index if not exists leases_unit_id_idx            on leases(unit_id);
+create index if not exists leases_property_id_idx        on leases(property_id);
+create index if not exists rent_payments_lease_id_idx    on rent_payments(lease_id);
+create index if not exists rent_payments_property_id_idx on rent_payments(property_id);
+create index if not exists rent_payments_due_date_idx    on rent_payments(due_date);
+create index if not exists units_property_id_idx         on units(property_id);
+
+-- real column replacing phantom properties.market_value
+alter table properties add column if not exists market_value numeric(14,2);
+
+-- Phase 2 tenant-portal bridge: COLUMN ONLY, no RLS / no app logic yet
+alter table tenants add column if not exists auth_user_id uuid references auth.users(id) on delete set null;
+
+-- ---------- Stripe columns the Netlify functions already write ----------
+alter table tenants       add column if not exists stripe_customer_id        text;
+alter table rent_payments add column if not exists payment_link             text;
+alter table rent_payments add column if not exists stripe_payment_intent_id text;
+alter table leases        add column if not exists reminder_days            int default 3;
+alter table leases        add column if not exists stripe_subscription_id   text;
+
+-- ---------- richer property_summary (drop first: column set changes) ----------
+drop view if exists property_summary;
+create view property_summary
+with (security_invoker = true) as
+select
+  p.id, p.user_id, p.name, p.address, p.city, p.state, p.units_count,
+  p.market_value,
+  (select count(*) from units u where u.property_id = p.id)                                   as total_units,
+  (select count(distinct l.unit_id) from leases l
+     where l.property_id = p.id and l.status = 'active' and l.unit_id is not null)            as occupied_units,
+  (select coalesce(sum(coalesce(l.monthly_rent, 0)), 0) from leases l
+     where l.property_id = p.id and l.status = 'active')                                      as scheduled_rent,
+  (select count(*) from rooms r join units u on u.id = r.unit_id where u.property_id = p.id)  as total_rooms,
+  coalesce((select sum(rp.amount) from rent_payments rp
+            where rp.property_id = p.id and rp.status = 'paid'
+              and date_trunc('month', rp.paid_date) = date_trunc('month', current_date)), 0)  as collected_this_month,
+  coalesce((select sum(e.amount) from expenses e
+            where e.property_id = p.id
+              and date_trunc('month', e.date) = date_trunc('month', current_date)), 0)        as expenses_this_month,
+  (select count(*) from tenants t where t.property_id = p.id and t.status = 'active')         as active_tenants
+from properties p;
+
+-- ============================================================
 -- DONE. Next: Dashboard → Authentication → Providers → Google
 -- (enable + paste Client ID/Secret), then Authentication → URL
 -- Configuration → add redirect URLs:

@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import { isDemoUser } from '../lib/demoData'
 import { VT, VIcon, VPill, VAvatar, VSection } from '../lib/vestry-shared'
+import UpgradeGate from '../components/UpgradeGate'
 
 // ── Sparkline stat card ──────────────────────────────────────────────────────
 function StatCard({ label, value, delta, deltaPositive, sparkline, accent }) {
@@ -183,7 +184,7 @@ export default function Dashboard() {
         { data: overdueData },
         { data: expenseData },
         { data: recentData },
-        { data: tenantCount },
+        { data: activeLeases },
       ] = await Promise.all([
         // Paid this month
         supabase.from('rent_payments')
@@ -209,9 +210,9 @@ export default function Dashboard() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(5),
-        // Active tenant count (for collection rate)
-        supabase.from('tenants')
-          .select('id', { count: 'exact' })
+        // Active lease count (denominator for collection rate)
+        supabase.from('leases')
+          .select('id')
           .eq('user_id', user.id)
           .eq('status', 'active'),
       ])
@@ -221,7 +222,7 @@ export default function Dashboard() {
       const expenses = (expenseData || []).reduce((s, p) => s + Number(p.amount || 0), 0)
       const net = collected - expenses
       const paidCount = (paidData || []).length
-      const total = tenantCount?.length || paidCount || 1
+      const total = (activeLeases || []).length || paidCount || 1
       const collectionPct = total > 0 ? Math.round((paidCount / total) * 100) : 0
 
       const overdue = (overdueData || []).map(p => {
@@ -369,10 +370,12 @@ export default function Dashboard() {
               <div style={{ fontSize: 13, color: VT.text2, marginTop: 3, fontWeight: 500 }}>{fmt(od.amount)} · {od.prop}</div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button style={{
-                padding: '8px 14px', background: 'transparent', border: `1px solid ${VT.line}`,
-                borderRadius: 8, fontSize: 13, fontWeight: 600, color: VT.text1, cursor: 'pointer',
-              }}>Send reminder</button>
+              <UpgradeGate feature="reminders">
+                <button onClick={() => navigate('/payments')} style={{
+                  padding: '8px 14px', background: 'transparent', border: `1px solid ${VT.line}`,
+                  borderRadius: 8, fontSize: 13, fontWeight: 600, color: VT.text1, cursor: 'pointer',
+                }}>Send reminder</button>
+              </UpgradeGate>
             </div>
           </div>
         ))}

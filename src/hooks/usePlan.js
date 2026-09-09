@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { isDemoUser } from '../lib/demoData'
@@ -37,25 +37,19 @@ export function usePlan() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadProfile = useCallback(async () => {
     if (!user) { setLoading(false); return }
-
-    if (isDemoUser(user)) {
-      setProfile(DEMO_PROFILE)
-      setLoading(false)
-      return
-    }
-
-    supabase
+    if (isDemoUser(user)) { setProfile(DEMO_PROFILE); setLoading(false); return }
+    const { data } = await supabase
       .from('profiles')
       .select('plan, is_admin, stripe_customer_id, stripe_subscription_id')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => {
-        setProfile(data ?? { plan: 'free', is_admin: false })
-        setLoading(false)
-      })
+    setProfile(data ?? { plan: 'free', is_admin: false })
+    setLoading(false)
   }, [user])
+
+  useEffect(() => { loadProfile() }, [loadProfile])
 
   // Admins always get portfolio-level access
   const effectivePlan = profile?.is_admin ? 'portfolio' : (profile?.plan ?? 'free')
@@ -75,5 +69,6 @@ export function usePlan() {
     loading,
     can,
     canAddProperty,
+    refetch:     loadProfile,
   }
 }

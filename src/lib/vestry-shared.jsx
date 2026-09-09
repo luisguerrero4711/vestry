@@ -19,6 +19,7 @@ export const VT = {
   fontDisplay:'var(--font-display)',
   fontText:   'var(--font-text)',
   fontMono:   'var(--font-mono)',
+  fontNum:    'var(--font-num)',
   shadowCard: 'var(--shadow-card)',
   shadowMd:   'var(--shadow-md)',
   shadowLg:   'var(--shadow-lg)',

@@ -4,7 +4,7 @@
    Scheme A (Navy + Terracotta) as default
 ────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -13,10 +13,11 @@
 }
 
 :root {
-  /* ── Hi-fi design tokens — Apple/iOS-inspired ── */
-  --font-display: 'Geist', -apple-system, 'SF Pro Display', sans-serif;
-  --font-text:    'Geist', -apple-system, 'SF Pro Text', sans-serif;
+  /* ── Brand fonts — Cormorant display + Outfit body ── */
+  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-text:    'Outfit', -apple-system, 'SF Pro Text', system-ui, sans-serif;
   --font-mono:    'Geist Mono', 'SF Mono', 'JetBrains Mono', monospace;
+  --font-num:     'Outfit', 'Geist Mono', system-ui, sans-serif;   /* big figures */
 
   /* Surfaces */
   --bg-page:    oklch(0.985 0.003 250);
@@ -34,10 +35,11 @@
   --line:        oklch(0.92 0.005 250);
   --line-strong: oklch(0.86 0.008 250);
 
-  /* Brand — iOS blue */
-  --brand:         oklch(0.62 0.18 255);
-  --brand-tint:    oklch(0.96 0.04 255);
-  --brand-pressed: oklch(0.55 0.18 255);
+  /* Brand — Terracotta (#C0614A) over Navy ink */
+  --brand:         oklch(0.56 0.12 40);
+  --brand-tint:    oklch(0.95 0.03 40);
+  --brand-pressed: oklch(0.49 0.13 40);
+  --navy:          #1B2B3A;
 
   /* Status */
   --green:      oklch(0.68 0.15 155);
@@ -74,7 +76,7 @@
   --btn-fg:     oklch(1 0 0);
   --cta:        #C0614A;
   --cta-fg:     #FFFFFF;
-  --stat-col:   oklch(0.62 0.18 255);
+  --stat-col:   var(--brand);
   --pill-bg:    var(--bg-tint);
   --pill-bd:    var(--line);
   --pill-fg:    var(--text-2);
@@ -88,7 +90,7 @@
   --sidebar:    oklch(0.985 0.003 250);
   --active-bg:  var(--brand-tint);
   --active-fg:  var(--brand);
-  --link:       oklch(0.62 0.18 255);
+  --link:       var(--brand);
 }
 
 html {

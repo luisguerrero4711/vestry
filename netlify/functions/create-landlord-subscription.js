@@ -70,7 +70,7 @@ exports.handler = async (event) => {
       customer:   customerId,
       mode:       'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.URL || 'https://vestry-app.netlify.app'}/dashboard?upgraded=true`,
+      success_url: `${process.env.URL || 'https://vestry-app.netlify.app'}/pricing?upgraded=true`,
       cancel_url:  `${process.env.URL || 'https://vestry-app.netlify.app'}/pricing`,
       metadata:   { supabase_user_id: userId, plan: planId },
       subscription_data: {

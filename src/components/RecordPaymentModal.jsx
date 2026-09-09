@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { isDemoUser, demoProperties, demoTenants, demoPayments } from '../lib/demoData'
+import { isDemoUser, demoProperties, demoTenants, demoLeases } from '../lib/demoData'
+import { activeLeaseForTenant } from '../lib/derive'
 import { VT, VIcon } from '../lib/vestry-shared'
 
 const inp = {
@@ -21,6 +22,7 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
   const { user } = useAuth()
   const [properties, setProperties] = useState([])
   const [tenants, setTenants] = useState([])
+  const [leases, setLeases] = useState([])
   const [form, setForm] = useState({
     property_id: '', tenant_id: '',
     amount: '', due_date: today, paid_date: today,
@@ -39,18 +41,21 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
         name: `${t.first_name} ${t.last_name}`,
         property_id: t.property_id,
       })))
+      setLeases(demoLeases)
       return
     }
     Promise.all([
       supabase.from('properties').select('id, name').eq('user_id', user.id).order('name'),
       supabase.from('tenants').select('id, first_name, last_name, property_id').eq('user_id', user.id).eq('status', 'active').order('first_name'),
-    ]).then(([{ data: props }, { data: tens }]) => {
+      supabase.from('leases').select('id, tenant_id, unit_id, room_id, status').eq('user_id', user.id),
+    ]).then(([{ data: props }, { data: tens }, { data: ls }]) => {
       setProperties(props || [])
       setTenants((tens || []).map(t => ({
         id: t.id,
         name: `${t.first_name} ${t.last_name}`.trim(),
         property_id: t.property_id,
       })))
+      setLeases(ls || [])
     })
   }, [user])
 
@@ -72,34 +77,40 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
     const selectedProp = properties.find(p => p.id === form.property_id)
     const selectedTenant = tenants.find(t => t.id === form.tenant_id)
 
+    const [first_name, ...rest] = (selectedTenant?.name || '').split(' ')
+
     if (isDemoUser(user)) {
-      const d = new Date(form.paid_date || form.due_date)
-      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      const statusLabel = form.status === 'paid' ? 'Received' : form.status === 'overdue' ? 'Overdue' : 'Pending'
-      const tone = form.status === 'paid' ? 'success' : form.status === 'overdue' ? 'danger' : 'warn'
       onAdded?.({
         id: `demo-pay-${Date.now()}`,
-        d: label,
-        init: selectedTenant ? selectedTenant.name.slice(0, 2).toUpperCase() : '—',
-        color: '#60A5FA',
-        name: selectedTenant?.name || 'Tenant',
-        prop: selectedProp?.name || '—',
-        amt: `+$${Number(form.amount).toLocaleString()}`,
-        method: form.payment_method,
-        ref: '—',
-        status: tone,
-        label: statusLabel,
+        user_id: 'demo-user-id',
+        property_id: form.property_id,
+        tenant_id: form.tenant_id || null,
+        lease_id: null, unit_id: null, room_id: null,
+        amount: Number(form.amount),
+        due_date: form.due_date,
+        paid_date: (form.status === 'paid' || form.status === 'partial') ? form.paid_date : null,
+        payment_method: form.payment_method,
+        status: form.status,
+        notes: form.notes.trim() || null,
+        properties: selectedProp ? { name: selectedProp.name } : null,
+        tenants: selectedTenant ? { first_name: first_name || '', last_name: rest.join(' ') } : null,
       })
       onClose(); return
     }
 
-    // Insert into rent_payments (the correct table name from schema)
+    // Link the payment to the tenant's active lease + unit/room when we can,
+    // so reminders, autopay and the lease ledger have what they need.
+    const lease = activeLeaseForTenant(form.tenant_id, leases)
+
     const { data, error: err } = await supabase
       .from('rent_payments')
       .insert([{
         user_id: user.id,
         property_id: form.property_id,
         tenant_id: form.tenant_id || null,
+        lease_id: lease?.id || null,
+        unit_id: lease?.unit_id || null,
+        room_id: lease?.room_id || null,
         amount: Number(form.amount),
         due_date: form.due_date,
         paid_date: form.status === 'paid' ? form.paid_date : null,
@@ -113,26 +124,7 @@ export default function RecordPaymentModal({ onClose, onAdded }) {
     setSaving(false)
     if (err) { setError(err.message); return }
 
-    // Map to display shape for Payments.jsx
-    const d = new Date(data.paid_date || data.due_date)
-    const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    const tenantName = data.tenants ? `${data.tenants.first_name} ${data.tenants.last_name}`.trim() : '—'
-    const tone = data.status === 'paid' ? 'success' : data.status === 'overdue' ? 'danger' : 'warn'
-    const statusLabel = data.status === 'paid' ? 'Received' : data.status === 'overdue' ? 'Overdue' : 'Pending'
-
-    onAdded?.({
-      id: data.id,
-      d: dateLabel,
-      init: tenantName.slice(0, 2).toUpperCase(),
-      color: '#60A5FA',
-      name: tenantName,
-      prop: data.properties?.name || '—',
-      amt: `+$${Number(data.amount).toLocaleString()}`,
-      method: data.payment_method || '—',
-      ref: '—',
-      status: tone,
-      label: statusLabel,
-    })
+    onAdded?.(data)   // raw rent_payments row (+ properties/tenants joins)
     onClose()
   }
 

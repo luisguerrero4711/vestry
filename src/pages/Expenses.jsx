@@ -3,102 +3,92 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import Layout from '../components/Layout'
 import { isDemoUser, demoExpenses, demoProperties } from '../lib/demoData'
+import { VT, VIcon, VPill, VSection } from '../lib/vestry-shared'
 
-const fmt = (n) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
+const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n ?? 0)
+const CATEGORIES = ['maintenance', 'insurance', 'taxes', 'utilities', 'management', 'mortgage', 'other']
+const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1)
 
-const CATEGORIES = ['maintenance','insurance','taxes','utilities','management','mortgage','other']
+const inp = {
+  width: '100%', padding: '9px 12px', border: `1.5px solid ${VT.line}`, borderRadius: 10,
+  background: VT.card, color: VT.text1, fontFamily: VT.fontText, fontSize: 13, fontWeight: 500, outline: 'none',
+}
+const lbl = { fontSize: 11, fontWeight: 600, color: VT.text3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'block' }
 
 function ExpenseModal({ expense, properties, onClose, onSave }) {
   const { user } = useAuth()
-  const isEdit   = !!expense?.id
+  const isEdit = !!expense?.id
   const [form, setForm] = useState({
-    property_id: '', category: 'maintenance', description: '',
-    amount: '', date: new Date().toISOString().split('T')[0],
-    vendor: '', notes: '',
-    ...expense,
+    property_id: expense?.property_id || '',
+    category: expense?.category || 'maintenance',
+    description: expense?.description || '',
+    amount: expense?.amount ?? '',
+    date: expense?.date || new Date().toISOString().split('T')[0],
+    vendor: expense?.vendor || '',
+    notes: expense?.notes || '',
   })
   const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-
+  const [error, setError] = useState('')
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleSave = async (e) => {
     e.preventDefault()
     if (isDemoUser(user)) { onSave(); return }
     setLoading(true); setError('')
-    const payload = { ...form, user_id: user.id, amount: Number(form.amount), unit_id: null }
-    const { error } = isEdit
+    const payload = {
+      user_id: user.id,
+      property_id: form.property_id,
+      category: form.category,
+      description: form.description.trim(),
+      amount: Number(form.amount),
+      date: form.date,
+      vendor: form.vendor.trim() || null,
+      notes: form.notes.trim() || null,
+    }
+    const { error: err } = isEdit
       ? await supabase.from('expenses').update(payload).eq('id', expense.id)
       : await supabase.from('expenses').insert(payload)
-    if (error) { setError(error.message); setLoading(false); return }
+    if (err) { setError(err.message); setLoading(false); return }
     onSave()
   }
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
-        <div className="modal-header">
-          <div className="modal-title">{isEdit ? 'Edit Expense' : 'Log Expense'}</div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: VT.card, borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: VT.shadowLg, maxHeight: '92vh', overflowY: 'auto' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${VT.line}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontFamily: VT.fontDisplay, fontSize: 17, fontWeight: 600, letterSpacing: '-0.02em' }}>{isEdit ? 'Edit expense' : 'Log expense'}</div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, background: VT.tint, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <VIcon.X s={14} c={VT.text2} />
+          </button>
         </div>
-        <form onSubmit={handleSave}>
-          <div className="modal-body">
-            {error && <div className="alert alert-error">{error}</div>}
-
-            <div className="form-group">
-              <label className="form-label">Property *</label>
-              <select className="form-select" required
-                value={form.property_id} onChange={e => set('property_id', e.target.value)}>
-                <option value="">— Select property —</option>
-                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        <form onSubmit={handleSave} style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 13 }}>
+          {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#b91c1c', fontWeight: 500 }}>{error}</div>}
+          {isDemoUser(user) && <div style={{ background: VT.brandTint, borderRadius: 8, padding: '8px 12px', fontSize: 12, color: VT.brand, fontWeight: 500 }}>Demo mode — saved for this session only.</div>}
+          <div>
+            <label style={lbl}>Property *</label>
+            <select style={{ ...inp, cursor: 'pointer' }} required value={form.property_id} onChange={e => set('property_id', e.target.value)}>
+              <option value="">— Select property —</option>
+              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={lbl}>Category</label>
+              <select style={{ ...inp, cursor: 'pointer' }} value={form.category} onChange={e => set('category', e.target.value)}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{cap(c)}</option>)}
               </select>
             </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Category</label>
-                <select className="form-select"
-                  value={form.category} onChange={e => set('category', e.target.value)}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Amount *</label>
-                <input type="number" className="form-input" placeholder="250" min={0} step="0.01" required
-                  value={form.amount} onChange={e => set('amount', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Description *</label>
-              <input className="form-input" placeholder="e.g. Plumber repair — bathroom leak" required
-                value={form.description} onChange={e => set('description', e.target.value)} />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Date *</label>
-                <input type="date" className="form-input" required
-                  value={form.date} onChange={e => set('date', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Vendor</label>
-                <input className="form-input" placeholder="ABC Plumbing Co."
-                  value={form.vendor} onChange={e => set('vendor', e.target.value)} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Notes</label>
-              <textarea className="form-textarea"
-                value={form.notes} onChange={e => set('notes', e.target.value)} />
-            </div>
+            <div><label style={lbl}>Amount *</label><input style={inp} type="number" min={0} step="0.01" required value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="250" /></div>
           </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+          <div><label style={lbl}>Description *</label><input style={inp} required value={form.description} onChange={e => set('description', e.target.value)} placeholder="e.g. Plumber repair — bathroom leak" /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div><label style={lbl}>Date *</label><input style={inp} type="date" required value={form.date} onChange={e => set('date', e.target.value)} /></div>
+            <div><label style={lbl}>Vendor</label><input style={inp} value={form.vendor} onChange={e => set('vendor', e.target.value)} placeholder="ABC Plumbing Co." /></div>
+          </div>
+          <div><label style={lbl}>Notes</label><textarea style={{ ...inp, resize: 'vertical', minHeight: 56 }} value={form.notes} onChange={e => set('notes', e.target.value)} /></div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px', background: VT.tint, border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, color: VT.text2, cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ flex: 2, padding: '10px', background: VT.brand, border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
               {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Log expense'}
             </button>
           </div>
@@ -110,11 +100,11 @@ function ExpenseModal({ expense, properties, onClose, onSave }) {
 
 export default function Expenses() {
   const { user } = useAuth()
-  const [expenses, setExp]    = useState([])
+  const [expenses, setExp] = useState([])
   const [properties, setProps] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal]     = useState(null)
-  const [catFilter, setCat]   = useState('all')
+  const [modal, setModal] = useState(null)
+  const [catFilter, setCat] = useState('all')
 
   const fetchData = async () => {
     setLoading(true)
@@ -125,10 +115,7 @@ export default function Expenses() {
       return
     }
     const [{ data: exps }, { data: props }] = await Promise.all([
-      supabase.from('expenses')
-        .select('*, properties(name)')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false }),
+      supabase.from('expenses').select('*, properties(name)').eq('user_id', user.id).order('date', { ascending: false }),
       supabase.from('properties').select('id,name').eq('user_id', user.id),
     ])
     setExp(exps ?? [])
@@ -145,98 +132,90 @@ export default function Expenses() {
     fetchData()
   }
 
-  const filtered   = catFilter === 'all' ? expenses : expenses.filter(e => e.category === catFilter)
+  const filtered = catFilter === 'all' ? expenses : expenses.filter(e => e.category === catFilter)
   const totalShown = filtered.reduce((s, e) => s + Number(e.amount), 0)
-
-  // by-category totals
-  const catTotals = CATEGORIES.map(c => ({
-    cat: c,
-    total: expenses.filter(e => e.category === c).reduce((s, e) => s + Number(e.amount), 0),
-  })).filter(x => x.total > 0)
+  const catTotals = CATEGORIES
+    .map(c => ({ cat: c, total: expenses.filter(e => e.category === c).reduce((s, e) => s + Number(e.amount), 0) }))
+    .filter(x => x.total > 0)
 
   return (
     <Layout>
-      <div className="page">
-        <div className="page-header">
+      <div className="v-page">
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Expenses</h1>
-            <p className="page-subtitle">Track all property-related costs</p>
+            <div style={{ fontSize: 13, color: VT.text3, fontWeight: 500, marginBottom: 4 }}>{expenses.length} records · {fmt(expenses.reduce((s, e) => s + Number(e.amount), 0))} total</div>
+            <h1 style={{ fontFamily: VT.fontDisplay, fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Expenses</h1>
           </div>
-          <button className="btn btn-accent" onClick={() => setModal('new')}>+ Log Expense</button>
+          <button onClick={() => setModal('new')} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+            background: VT.brand, border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            color: '#fff', cursor: 'pointer', boxShadow: '0 1px 2px rgba(37,99,235,0.3)',
+          }}><VIcon.Plus s={14} c="#fff" /> Log expense</button>
         </div>
 
-        {/* Category breakdown */}
         {catTotals.length > 0 && (
-          <div style={styles.catRow}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
             {catTotals.map(x => (
-              <div key={x.cat} style={styles.catCard}
-                onClick={() => setCat(catFilter === x.cat ? 'all' : x.cat)}>
-                <div style={styles.catVal}>{fmt(x.total)}</div>
-                <div style={styles.catLabel}>{x.cat}</div>
+              <div key={x.cat} onClick={() => setCat(catFilter === x.cat ? 'all' : x.cat)} style={{
+                background: VT.card, border: `1px solid ${catFilter === x.cat ? 'var(--brand)' : VT.line}`, borderRadius: 10,
+                padding: '10px 16px', cursor: 'pointer',
+              }}>
+                <div style={{ fontFamily: VT.fontDisplay, fontSize: 20, fontWeight: 600 }}>{fmt(x.total)}</div>
+                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: VT.text3, fontWeight: 600, marginTop: 2 }}>{x.cat}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Filter bar */}
-        <div style={styles.filterRow}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
           {['all', ...CATEGORIES].map(c => (
-            <button key={c} onClick={() => setCat(c)}
-              style={{ ...styles.filterBtn, ...(catFilter === c ? styles.filterActive : {}) }}>
-              {c.charAt(0).toUpperCase() + c.slice(1)}
-            </button>
+            <button key={c} onClick={() => setCat(c)} style={{
+              padding: '6px 13px', border: `1px solid ${catFilter === c ? 'transparent' : VT.line}`, borderRadius: 100,
+              background: catFilter === c ? VT.brandTint : 'transparent', color: catFilter === c ? VT.brand : VT.text2,
+              fontSize: 12, fontWeight: catFilter === c ? 600 : 500, cursor: 'pointer', fontFamily: VT.fontText,
+            }}>{cap(c)}</button>
           ))}
         </div>
 
-        {loading ? <div className="spinner" /> : filtered.length === 0 ? (
-          <div className="card">
-            <div className="empty-state">
-              <div className="empty-icon">🔧</div>
-              <div className="empty-title">No expenses logged</div>
-              <div className="empty-sub">Track repairs, insurance, taxes, and more by property.</div>
-              <button className="btn btn-primary" onClick={() => setModal('new')}>Log first expense</button>
-            </div>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>Loading expenses…</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 48, color: VT.text3, fontWeight: 500 }}>
+            No expenses. <button onClick={() => setModal('new')} style={{ background: 'none', border: 'none', color: VT.brand, fontWeight: 600, cursor: 'pointer' }}>Log the first one</button>
           </div>
         ) : (
-          <div className="card">
-            <div style={{ padding: '12px 18px 10px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{filtered.length} records</span>
-              <span style={{ fontWeight: 600, fontSize: 13.5 }}>Total: {fmt(totalShown)}</span>
+          <div style={{ background: VT.card, borderRadius: 'var(--r-md)', boxShadow: VT.shadowCard, overflow: 'hidden' }}>
+            <div style={{ padding: '12px 20px', borderBottom: `1px solid ${VT.line}`, display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: VT.text3 }}>
+              <span>{filtered.length} records</span>
+              <span style={{ color: VT.text1 }}>Total: {fmt(totalShown)}</span>
             </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Description</th>
-                  <th>Property</th>
-                  <th>Category</th>
-                  <th>Date</th>
-                  <th>Vendor</th>
-                  <th>Amount</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(exp => (
-                  <tr key={exp.id}>
-                    <td className="td-primary">{exp.description}</td>
-                    <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{exp.properties?.name ?? '—'}</td>
-                    <td><span className="pill pill-accent" style={{ fontSize: 10.5 }}>{exp.category}</span></td>
-                    <td style={{ fontSize: 12 }}>
-                      {new Date(exp.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
-                    </td>
-                    <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{exp.vendor || '—'}</td>
-                    <td className="td-mono">{fmt(exp.amount)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setModal(exp)}>Edit</button>
-                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--late)' }}
-                          onClick={() => handleDelete(exp.id)}>Del</button>
-                      </div>
-                    </td>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
+                <thead>
+                  <tr style={{ background: VT.tint }}>
+                    {['Description', 'Property', 'Category', 'Date', 'Vendor', 'Amount', ''].map((h, i) => (
+                      <th key={i} style={{ textAlign: i === 5 ? 'right' : 'left', padding: '10px 16px', fontSize: 11, fontWeight: 600, color: VT.text3, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map(exp => (
+                    <tr key={exp.id} style={{ borderTop: `1px solid ${VT.line}` }}>
+                      <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600 }}>{exp.description}</td>
+                      <td style={{ padding: '14px 16px', fontSize: 12, color: VT.text3, fontWeight: 500 }}>{exp.properties?.name ?? '—'}</td>
+                      <td style={{ padding: '14px 16px' }}><VPill tone="neutral">{cap(exp.category)}</VPill></td>
+                      <td style={{ padding: '14px 16px', fontSize: 12, color: VT.text2, fontWeight: 500, whiteSpace: 'nowrap' }}>{new Date(exp.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
+                      <td style={{ padding: '14px 16px', fontSize: 12, color: VT.text3, fontWeight: 500 }}>{exp.vendor || '—'}</td>
+                      <td style={{ padding: '14px 16px', fontFamily: VT.fontDisplay, fontSize: 14, fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(exp.amount)}</td>
+                      <td style={{ padding: '14px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => setModal(exp)} style={{ background: 'none', border: 'none', color: VT.text2, fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: '4px 6px' }}>Edit</button>
+                        <button onClick={() => handleDelete(exp.id)} style={{ background: 'none', border: 'none', color: VT.red, fontWeight: 600, fontSize: 12, cursor: 'pointer', padding: '4px 6px' }}>Del</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -251,59 +230,4 @@ export default function Expenses() {
       )}
     </Layout>
   )
-}
-
-const styles = {
-  catRow: {
-    display: 'flex',
-    gap: 10,
-    marginBottom: 18,
-    flexWrap: 'wrap',
-  },
-  catCard: {
-    background: 'var(--warm-white)',
-    border: '1px solid var(--border)',
-    borderRadius: 10,
-    padding: '10px 16px',
-    cursor: 'pointer',
-    transition: 'border-color 0.15s',
-  },
-  catVal: {
-    fontFamily: "'Cormorant Garamond', serif",
-    fontSize: 20,
-    fontWeight: 600,
-    color: 'var(--text)',
-  },
-  catLabel: {
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'var(--muted)',
-    fontWeight: 600,
-    marginTop: 2,
-  },
-  filterRow: {
-    display: 'flex',
-    gap: 4,
-    marginBottom: 16,
-    flexWrap: 'wrap',
-  },
-  filterBtn: {
-    padding: '6px 13px',
-    border: '1px solid var(--border)',
-    borderRadius: 100,
-    background: 'transparent',
-    color: 'var(--muted)',
-    fontSize: 12,
-    fontWeight: 500,
-    cursor: 'pointer',
-    fontFamily: "'Outfit', sans-serif",
-    transition: 'background 0.15s, color 0.15s',
-  },
-  filterActive: {
-    background: 'var(--active-bg)',
-    color: 'var(--active-fg)',
-    borderColor: 'var(--pill-bd)',
-    fontWeight: 600,
-  },
 }

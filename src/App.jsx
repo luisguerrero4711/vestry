@@ -6,9 +6,12 @@ import AuthCallback    from './pages/AuthCallback'
 import RoleSelection   from './pages/RoleSelection'
 import Dashboard       from './pages/Dashboard'
 import Properties      from './pages/Properties'
+import PropertyDetail  from './pages/PropertyDetail'
+import RentRoll        from './pages/RentRoll'
 import Tenants         from './pages/Tenants'
 import Payments        from './pages/Payments'
 import Leases          from './pages/Leases'
+import LeaseDetail     from './pages/LeaseDetail'
 import Expenses        from './pages/Expenses'
 import Reports         from './pages/Reports'
 import Pricing         from './pages/Pricing'
@@ -37,11 +40,14 @@ export default function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/role-selection" element={<PrivateRoute><RoleSelection /></PrivateRoute>} />
 
-          <Route path="/dashboard"  element={<PrivateRoute><Dashboard  /></PrivateRoute>} />
-          <Route path="/properties" element={<PrivateRoute><Properties /></PrivateRoute>} />
-          <Route path="/tenants"    element={<PrivateRoute><Tenants    /></PrivateRoute>} />
-          <Route path="/payments"   element={<PrivateRoute><Payments   /></PrivateRoute>} />
-          <Route path="/leases"     element={<PrivateRoute><Leases     /></PrivateRoute>} />
+          <Route path="/dashboard"      element={<PrivateRoute><Dashboard      /></PrivateRoute>} />
+          <Route path="/properties"     element={<PrivateRoute><Properties     /></PrivateRoute>} />
+          <Route path="/properties/:id" element={<PrivateRoute><PropertyDetail /></PrivateRoute>} />
+          <Route path="/rent-roll"      element={<PrivateRoute><RentRoll       /></PrivateRoute>} />
+          <Route path="/tenants"        element={<PrivateRoute><Tenants        /></PrivateRoute>} />
+          <Route path="/payments"       element={<PrivateRoute><Payments       /></PrivateRoute>} />
+          <Route path="/leases"         element={<PrivateRoute><Leases         /></PrivateRoute>} />
+          <Route path="/leases/:id"     element={<PrivateRoute><LeaseDetail    /></PrivateRoute>} />
           <Route path="/expenses"   element={<PrivateRoute><Expenses   /></PrivateRoute>} />
           <Route path="/reports"    element={<PrivateRoute><Reports    /></PrivateRoute>} />
           <Route path="/pricing"    element={<PrivateRoute><Pricing    /></PrivateRoute>} />

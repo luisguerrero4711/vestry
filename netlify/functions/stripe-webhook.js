@@ -9,10 +9,15 @@ const supabase = createClient(
 exports.handler = async (event) => {
   const sig = event.headers['stripe-signature']
 
+  // Netlify may hand us the body base64-encoded; Stripe needs the raw bytes.
+  const rawBody = event.isBase64Encoded
+    ? Buffer.from(event.body, 'base64')
+    : event.body
+
   let stripeEvent
   try {
     stripeEvent = stripe.webhooks.constructEvent(
-      event.body,
+      rawBody,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     )
